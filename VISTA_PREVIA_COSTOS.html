@@ -74,25 +74,52 @@
         };
 
         const Sidebar = ({ activeTab, onTabClick }) => (
-            <div className="sidebar flex flex-col shadow-2xl">
-                <div className="flex items-center gap-3 mb-10 px-2">
+            <div className="sidebar flex flex-col shadow-2xl custom-scrollbar overflow-y-auto">
+                <div className="flex items-center gap-3 mb-10 px-2 shrink-0">
                     <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-black text-white font-heading text-lg shadow-lg shadow-blue-600/20">C</div>
-                    <span className="font-heading font-extrabold text-white text-lg tracking-tight uppercase tracking-widest">COST PRO <span className="text-blue-500 text-xs">v3.2</span></span>
+                    <span className="font-heading font-extrabold text-white text-lg tracking-tight uppercase tracking-widest">COST PRO <span className="text-blue-500 text-xs">v3.3</span></span>
                 </div>
-                <nav className="flex-1 space-y-2">
-                    {[
-                        { id: 'dashboard', l: 'Dashboard', icon: '📊' },
-                        { id: 'obras', l: 'Gestión de Obras', icon: '🏗️' },
-                        { id: 'analisis', l: 'Análisis T.', icon: '📉' },
-                        { id: 'estructuras', l: 'Estructuras', icon: '🛠️' },
-                        { id: 'historial', l: 'Historial', icon: '🕒' },
-                        { id: 'config', l: 'Configuración', icon: '⚙️' }
-                    ].map(item => (
-                        <button key={item.id} onClick={() => onTabClick(item.id)} className={`w-full flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-300 ${activeTab === item.id ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/30' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-                            <span className="text-xl">{item.icon}</span>
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">{item.l}</span>
+                
+                <nav className="flex-1 space-y-6">
+                    <div className="space-y-2">
+                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] px-4 mb-4">Administración</p>
+                        {[
+                            { id: 'dashboard', l: 'Dashboard', icon: '📊' },
+                            { id: 'obras', l: 'Gestión de Obras', icon: '🏗️' },
+                            { id: 'estructuras', l: 'Estructuras', icon: '🛠️' },
+                            { id: 'historial', l: 'Historial', icon: '🕒' },
+                        ].map(item => (
+                            <button key={item.id} onClick={() => onTabClick(item.id)} className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 ${activeTab === item.id ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/30' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+                                <span className="text-lg">{item.icon}</span>
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em]">{item.l}</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="space-y-2 pt-4 border-t border-slate-800/50">
+                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] px-4 mb-4">Módulos de Gestión</p>
+                        {[
+                            { id: 'analisis', l: '1. Análisis de Costos', icon: '📉' },
+                            { id: 'finiquitos', l: '2. Prov. Finiquitos', icon: '👥' },
+                            { id: 'mensual', l: '3. Informe Mensual', icon: '📄' },
+                            { id: 'flujo', l: '4. Flujo de Obra', icon: '📈' },
+                            { id: 'proyeccion_ing', l: '5. Proy. Ingreso', icon: '💰' },
+                            { id: 'pagos', l: '6. Est. Pagos', icon: '✅' },
+                            { id: 'facturacion', l: '7. Facturación', icon: '🔍' }
+                        ].map(item => (
+                            <button key={item.id} onClick={() => onTabClick(item.id)} className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 ${activeTab === item.id ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/30' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+                                <span className="text-lg">{item.icon}</span>
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em]">{item.l}</span>
+                            </button>
+                        ))}
+                    </div>
+
+                     <div className="pt-4 border-t border-slate-800/50">
+                        <button onClick={() => onTabClick('config')} className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 ${activeTab === 'config' ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/30' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+                            <span className="text-lg">⚙️</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Configuración</span>
                         </button>
-                    ))}
+                    </div>
                 </nav>
             </div>
         );
@@ -643,6 +670,40 @@
                 </div>
             );
         };
+
+        const ModuleUnderConstruction = ({ title, icon }) => (
+            <div className="flex flex-col items-center justify-center h-full p-20 animate-fade-in">
+                <div className="w-32 h-32 bg-blue-600/5 rounded-[3rem] flex items-center justify-center mb-10 border border-blue-100 relative group overflow-hidden">
+                    <span className="text-6xl group-hover:scale-110 transition-transform duration-500">{icon}</span>
+                    <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+                <div className="text-center space-y-4 max-w-xl">
+                    <p className="text-[12px] font-black uppercase text-blue-500 tracking-[0.5em]">Módulo en Desarrollo</p>
+                    <h2 className="text-5xl font-black uppercase tracking-tighter text-slate-950 leading-tight">{title}</h2>
+                    <div className="h-1.5 w-24 bg-blue-600 mx-auto rounded-full mt-6"></div>
+                    <p className="text-slate-400 font-bold mt-10 text-lg leading-relaxed pt-6">
+                        Estamos trabajando para integrar esta matriz técnica en el ecosistema <span className="text-slate-900">COST PRO</span>. 
+                        Próximamente podrás procesar informes, generar indicadores y exportar análisis detallados.
+                    </p>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-6 mt-20 w-full max-w-3xl">
+                    {[
+                        { l: 'Motor de Cálculo', icon: '⚙️' },
+                        { l: 'Plantilla Excel', icon: '📊' },
+                        { l: 'Reporte PDF', icon: '📄' }
+                    ].map((item, i) => (
+                        <div key={i} className="bg-white p-6 rounded-[2rem] border border-slate-100 flex flex-col items-center gap-3 shadow-sm">
+                            <span className="text-2xl">{item.icon}</span>
+                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{item.l}</span>
+                            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2">
+                                <div className="bg-blue-600 h-full w-1/3 animate-pulse"></div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
 
         const CostSummaryTable = ({ data = [] }) => {
             if (!data.length) return <div className="p-32 text-center opacity-50 font-black text-slate-400 mt-10 uppercase tracking-widest text-[11px] border border-dashed rounded-[3rem]">No hay datos para el resumen de costos directos.</div>;
@@ -1662,6 +1723,16 @@
                                 </div>
                             </div>
                         )}
+                                </div>
+                            </div>
+                        )}
+                        {activeTab==='finiquitos' && <ModuleUnderConstruction title="Provisión de Finiquitos" icon="👥" />}
+                        {activeTab==='mensual' && <ModuleUnderConstruction title="Informe Mensual Técnico" icon="📄" />}
+                        {activeTab==='flujo' && <ModuleUnderConstruction title="Flujo de Obra" icon="📈" />}
+                        {activeTab==='proyeccion_ing' && <ModuleUnderConstruction title="Proyección de Ingreso" icon="💰" />}
+                        {activeTab==='pagos' && <ModuleUnderConstruction title="Control de Estados de Pagos" icon="✅" />}
+                        {activeTab==='facturacion' && <ModuleUnderConstruction title="Estatus de Facturación" icon="🔍" />}
+                        
                         {activeTab==='config'&&(
                             <ReportTypeManager reportTypes={reportTypes} onUpdate={setReportTypes} />
                         )}

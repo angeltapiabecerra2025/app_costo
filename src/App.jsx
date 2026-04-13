@@ -10,22 +10,18 @@ import {
   LogOut,
   UserCircle,
   TrendingUp,
-  AlertCircle,
-  Upload,
-  Database,
-  History,
-  Save,
-  Download,
-  Calendar,
-  Building2, 
-  Plus, 
   Search, 
   MoreVertical, 
   CheckCircle2, 
   Circle, 
   ArrowRight,
   ClipboardList,
-  ChevronDown
+  ChevronDown,
+  Users,
+  TrendingUp,
+  BarChart,
+  Receipt,
+  Camera
 } from 'lucide-react';
 
 // Shared Utilities
@@ -44,12 +40,17 @@ import { parseCostReport } from './services/ExcelBridge';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'obras', label: 'Gestión de Obras', icon: Building2 },
-    { id: 'analisis', label: 'Análisis Técnico', icon: Database },
-    { id: 'historial', label: 'Historial / Backups', icon: History },
-    { id: 'reporte1', label: 'Informe Mensual', icon: FileText },
-    { id: 'aprobaciones', label: 'Aprobaciones', icon: CheckCircle },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, group: 'admin' },
+    { id: 'obras', label: 'Gestión de Obras', icon: Building2, group: 'admin' },
+    { id: 'historial', label: 'Historial / Backups', icon: History, group: 'admin' },
+    { id: 'analisis', label: '1. Análisis de Costos', icon: Database, group: 'gestion' },
+    { id: 'finiquitos', label: '2. Provisión Finiquitos', icon: Users, group: 'gestion' },
+    { id: 'mensual', label: '3. Informe Mensual', icon: FileText, group: 'gestion' },
+    { id: 'flujo', label: '4. Flujo de Obra', icon: TrendingUp, group: 'gestion' },
+    { id: 'proyeccion_ing', label: '5. Proy. Ingreso', icon: BarChart, group: 'gestion' },
+    { id: 'pagos', label: '6. Estados de Pagos', icon: CheckCircle2, group: 'gestion' },
+    { id: 'facturacion', label: '7. Facturación', icon: Receipt, group: 'gestion' },
+    { id: 'fotos', label: '8. Inf. Fotográfico', icon: Camera, group: 'gestion' },
   ];
 
   return (
@@ -61,44 +62,58 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
         <h1 className="text-xl font-black font-heading text-white tracking-tight uppercase tracking-tighter">COST PRO <span className="text-blue-500">v3.2</span></h1>
       </div>
 
-      <nav className="flex-1 space-y-1">
-        {menuItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => {
-              if (item.id === 'analisis') {
-                // Force reset to upload view when entering from sidebar
-                window.dispatchEvent(new CustomEvent('resetAnalysisView'));
-              }
-              setActiveTab(item.id);
-            }}
-            className={cn(
-              "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group relative",
-              activeTab === item.id 
-                ? "bg-blue-600 text-white shadow-xl shadow-blue-600/20" 
-                : "text-slate-400 hover:text-white hover:bg-slate-800"
-            )}
-          >
-            <item.icon size={20} className={cn(activeTab === item.id ? "text-white" : "text-slate-500 group-hover:text-blue-400")} />
-            <span className="font-extrabold text-[12px] uppercase tracking-widest">{item.label}</span>
-            {activeTab === item.id && <ChevronRight size={16} className="ml-auto" />}
-          </button>
-        ))}
+      <nav className="flex-1 space-y-6 overflow-y-auto custom-scrollbar pr-2">
+        <div className="space-y-1">
+          <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-4 mb-2">Administración</p>
+          {menuItems.filter(i => i.group === 'admin').map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={cn(
+                "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 group",
+                activeTab === item.id 
+                  ? "bg-blue-600 text-white shadow-xl shadow-blue-600/20" 
+                  : "text-slate-400 hover:text-white hover:bg-slate-800"
+              )}
+            >
+              <item.icon size={18} className={cn(activeTab === item.id ? "text-white" : "text-slate-500 group-hover:text-blue-400")} />
+              <span className="font-extrabold text-[11px] uppercase tracking-widest">{item.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="space-y-1">
+          <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-4 mb-2">Módulos de Gestión</p>
+          {menuItems.filter(i => i.group === 'gestion').map((item) => (
+            <button
+              key={item.id}
+              onClick={() => {
+                if (item.id === 'analisis') {
+                  window.dispatchEvent(new CustomEvent('resetAnalysisView'));
+                }
+                setActiveTab(item.id);
+              }}
+              className={cn(
+                "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 group",
+                activeTab === item.id 
+                  ? "bg-blue-600 text-white shadow-xl shadow-blue-600/20" 
+                  : "text-slate-400 hover:text-white hover:bg-slate-800"
+              )}
+            >
+              <item.icon size={18} className={cn(activeTab === item.id ? "text-white" : "text-slate-500 group-hover:text-blue-400")} />
+              <span className="font-extrabold text-[11px] uppercase tracking-widest">{item.label}</span>
+            </button>
+          ))}
+        </div>
       </nav>
 
-      <div className="mt-auto border-t border-[#1e293b] pt-6 pb-2">
-        <div className="flex items-center gap-3 px-4 mb-6">
-          <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden">
-             <UserCircle className="text-slate-500" size={24} />
-          </div>
-          <div>
-            <p className="text-[11px] font-black text-white uppercase tracking-tighter">Director de Proyecto</p>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">EISA INFRAESTRUCTURA</p>
-          </div>
-        </div>
-        <button className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-red-400 transition-colors uppercase text-[10px] font-black tracking-widest">
-          <LogOut size={16} />
-          <span>Cerrar Sesión</span>
+      <div className="mt-auto border-t border-[#1e293b] pt-4 pb-2">
+        <button 
+          onClick={() => setActiveTab('settings')}
+          className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800 transition-all rounded-xl uppercase text-[10px] font-black tracking-widest"
+        >
+          <Settings size={16} />
+          <span>Configuración Sistema</span>
         </button>
       </div>
     </div>
@@ -141,6 +156,39 @@ const Dashboard = () => {
       </div>
     );
 };
+
+const ModuleUnderConstruction = ({ title, icon: Icon }) => (
+  <div className="flex flex-col items-center justify-center h-[80vh] p-20 animate-fade-in text-center">
+    <div className="w-32 h-32 bg-blue-600/5 rounded-[3rem] flex items-center justify-center mb-10 border border-blue-100 relative group overflow-hidden">
+      <Icon size={64} className="text-blue-600 group-hover:scale-110 transition-transform duration-500" strokeWidth={1.5} />
+      <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+    </div>
+    <div className="space-y-4 max-w-xl">
+      <p className="text-[12px] font-black uppercase text-blue-500 tracking-[0.5em]">Módulo en Desarrollo</p>
+      <h2 className="text-5xl font-black uppercase tracking-tighter text-slate-950 leading-tight">{title}</h2>
+      <div className="h-1.5 w-24 bg-blue-600 mx-auto rounded-full mt-6"></div>
+      <p className="text-slate-500 font-bold mt-10 text-lg leading-relaxed pt-6">
+        Estamos trabajando para integrar esta matriz técnica en el ecosistema <span className="text-slate-900 font-black">COST PRO</span>. 
+        Próximamente podrás procesar informes, generar indicadores y exportar análisis detallados.
+      </p>
+    </div>
+    <div className="grid grid-cols-3 gap-6 mt-16 w-full max-w-2xl">
+      {[
+        { l: 'Motor de Cálculo', icon: Settings },
+        { l: 'Plantilla Excel', icon: FileText },
+        { l: 'Reporte PDF', icon: Database }
+      ].map((item, i) => (
+        <div key={i} className="bg-white p-6 rounded-[2rem] border border-slate-100 flex flex-col items-center gap-3 shadow-sm">
+          <item.icon size={24} className="text-slate-400" />
+          <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{item.l}</span>
+          <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2">
+            <div className="bg-blue-600 h-full w-1/3 animate-pulse"></div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
 const App = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -560,10 +608,18 @@ const App = () => {
           />
         )}
 
-        {['reporte1', 'aprobaciones'].includes(activeTab) && (
+        {activeTab === 'finiquitos' && <ModuleUnderConstruction title="Provisión de Finiquitos" icon={Users} />}
+        {activeTab === 'mensual' && <ModuleUnderConstruction title="Informe Mensual Técnico" icon={FileText} />}
+        {activeTab === 'flujo' && <ModuleUnderConstruction title="Flujo de Obra" icon={TrendingUp} />}
+        {activeTab === 'proyeccion_ing' && <ModuleUnderConstruction title="Proyección de Ingreso" icon={BarChart} />}
+        {activeTab === 'pagos' && <ModuleUnderConstruction title="Control de Estados de Pagos" icon={CheckCircle2} />}
+        {activeTab === 'facturacion' && <ModuleUnderConstruction title="Estatus de Facturación" icon={Receipt} />}
+        {activeTab === 'fotos' && <ModuleUnderConstruction title="Informe Fotográfico" icon={Camera} />}
+
+        {activeTab === 'settings' && (
            <div className="p-32 glass bg-white border border-slate-100 rounded-[3rem] text-center">
-              <h2 className="text-4xl font-black text-slate-300 uppercase tracking-tighter">Sección en Desarrollo</h2>
-              <p className="text-slate-400 font-bold mt-4">Próxima implementación de matrices técnicas.</p>
+              <h2 className="text-4xl font-black text-slate-300 uppercase tracking-tighter">Configuración General</h2>
+              <p className="text-slate-400 font-bold mt-4">Gestión de parámetros globales del sistema.</p>
            </div>
         )}
       </main>
