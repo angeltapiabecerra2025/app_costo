@@ -25,8 +25,7 @@ import {
   Circle, 
   ArrowRight,
   ClipboardList,
-  ChevronDown,
-  Wrench
+  ChevronDown
 } from 'lucide-react';
 
 // Shared Utilities
@@ -41,25 +40,16 @@ import ProductionMatrixTable from './components/ProductionMatrixTable';
 import CostSummaryTable from './components/CostSummaryTable';
 import HistoryModule from './components/HistoryModule';
 import ProjectManager from './components/ProjectManager';
-import StructureManager from './components/StructureManager';
-import ConfigModule from './components/ConfigModule';
 import { parseCostReport } from './services/ExcelBridge';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
-  const [isMantenedoresOpen, setIsMantenedoresOpen] = useState(
-    ['obras', 'estructuras', 'configuracion'].includes(activeTab)
-  );
-
-  const mainMenuItems = [
+  const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'obras', label: 'Gestión de Obras', icon: Building2 },
     { id: 'analisis', label: 'Análisis Técnico', icon: Database },
     { id: 'historial', label: 'Historial / Backups', icon: History },
-  ];
-
-  const maintenanceItems = [
-    { id: 'obras', label: 'Gestión de Obras', icon: Building2 },
-    { id: 'estructuras', label: 'Estructuras', icon: ClipboardList },
-    { id: 'configuracion', label: 'Configuración', icon: Settings },
+    { id: 'reporte1', label: 'Informe Mensual', icon: FileText },
+    { id: 'aprobaciones', label: 'Aprobaciones', icon: CheckCircle },
   ];
 
   return (
@@ -68,15 +58,16 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
         <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/20">
           C
         </div>
-        <h1 className="text-xl font-black font-heading text-white tracking-tight uppercase tracking-tighter">COST PRO <span className="text-blue-500">v3.3</span></h1>
+        <h1 className="text-xl font-black font-heading text-white tracking-tight uppercase tracking-tighter">COST PRO <span className="text-blue-500">v3.2</span></h1>
       </div>
 
       <nav className="flex-1 space-y-1">
-        {mainMenuItems.map((item) => (
+        {menuItems.map((item) => (
           <button
             key={item.id}
             onClick={() => {
               if (item.id === 'analisis') {
+                // Force reset to upload view when entering from sidebar
                 window.dispatchEvent(new CustomEvent('resetAnalysisView'));
               }
               setActiveTab(item.id);
@@ -93,64 +84,6 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
             {activeTab === item.id && <ChevronRight size={16} className="ml-auto" />}
           </button>
         ))}
-
-        {/* Mantenedores Dropdown */}
-        <div className="mt-4 pt-4 border-t border-[#1e293b]">
-          <button
-            onClick={() => setIsMantenedoresOpen(!isMantenedoresOpen)}
-            className={cn(
-              "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group",
-              isMantenedoresOpen ? "text-white" : "text-slate-400 hover:text-white"
-            )}
-          >
-            <Wrench size={20} className={cn(isMantenedoresOpen ? "text-blue-400" : "text-slate-500 group-hover:text-blue-400")} />
-            <span className="font-extrabold text-[12px] uppercase tracking-widest">Mantenedores</span>
-            <ChevronDown size={16} className={cn("ml-auto transition-transform duration-300", isMantenedoresOpen && "rotate-180")} />
-          </button>
-          
-          <div className={cn(
-            "overflow-hidden transition-all duration-300 space-y-1 mt-1 origin-top",
-            isMantenedoresOpen ? "max-h-[300px] opacity-100 scale-100" : "max-h-0 opacity-0 scale-95"
-          )}>
-            {maintenanceItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={cn(
-                  "w-full flex items-center gap-3 pl-11 pr-4 py-3 rounded-xl transition-all duration-300 group text-[11px] font-bold uppercase tracking-widest",
-                  activeTab === item.id 
-                    ? "text-blue-400 bg-blue-400/5 shadow-sm" 
-                    : "text-slate-500 hover:text-white hover:bg-slate-800/50"
-                )}
-              >
-                <span>{item.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-4 pt-4 border-t border-[#1e293b]">
-           <button
-            onClick={() => setActiveTab('reporte1')}
-            className={cn(
-              "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group relative",
-              activeTab === 'reporte1' ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white hover:bg-slate-800"
-            )}
-          >
-            <FileText size={20} className="text-slate-500" />
-            <span className="font-extrabold text-[12px] uppercase tracking-widest">Informes</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('aprobaciones')}
-            className={cn(
-              "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group relative",
-              activeTab === 'aprobaciones' ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white hover:bg-slate-800"
-            )}
-          >
-            <CheckCircle size={20} className="text-slate-500" />
-            <span className="font-extrabold text-[12px] uppercase tracking-widest">Aprobaciones</span>
-          </button>
-        </div>
       </nav>
 
       <div className="mt-auto border-t border-[#1e293b] pt-6 pb-2">
@@ -183,13 +116,13 @@ const Dashboard = () => {
       <div className="animate-fade-in pb-20">
         <div className="flex justify-between items-end mb-10">
            <div className="space-y-1">
-             <div className="bg-red-600 text-white px-4 py-1 rounded-full text-[10px] font-black w-fit mb-4 animate-pulse">EIMI-CUB: V3.3</div>
+             <div className="bg-red-600 text-white px-4 py-1 rounded-full text-[10px] font-black w-fit mb-4 animate-pulse">DEBUG: V3.2 RELOADED</div>
              <h2 className="text-4xl font-black font-heading text-slate-900 tracking-tight uppercase leading-none">Dashboard <span className="text-blue-600">Corporativo</span></h2>
              <p className="text-slate-500 font-bold opacity-70 italic">Bienvenido, Jefe de OT. Tienes 3 informes pendientes de revisión técnica.</p>
            </div>
            <div className="text-right">
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Fecha de Sesión</p>
-              <p className="text-sm font-black text-slate-600">13 ABRIL, 2026</p>
+              <p className="text-sm font-black text-slate-600">30 MARZO, 2026</p>
            </div>
         </div>
         
@@ -197,7 +130,7 @@ const Dashboard = () => {
            {stats.map((s, i) => (
              <div key={i} className="glass bg-white p-8 border-slate-100 shadow-sm relative overflow-hidden group hover:translate-y-[-4px] transition-all">
                 <div className={cn("p-4 rounded-3xl bg-slate-50 mb-6 inline-block", s.color)}>
-                   <s.icon size={24} strokeWidth={2.5} />
+                  <s.icon size={24} strokeWidth={2.5} />
                 </div>
                 <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-1">{s.label}</p>
                 <h3 className="text-4xl font-black text-slate-900 tracking-tighter">{s.value}</h3>
@@ -256,7 +189,7 @@ const App = () => {
     try {
       await axios.post(`${API_URL}/save`, { reports: reps, projects: projs });
     } catch (err) {
-      // console.warn("Server offline, sync not possible");
+      console.error("Error syncing with server:", err);
     }
   };
 
@@ -271,6 +204,7 @@ const App = () => {
         reports = resp.data.reports || [];
         projs = resp.data.projects || [];
       } catch (err) {
+        console.warn("Server offline, using localStorage");
         const storedReports = localStorage.getItem('cost_pro_reports');
         const storedProjects = localStorage.getItem('cost_pro_projects');
         if (storedReports) reports = JSON.parse(storedReports);
@@ -290,10 +224,14 @@ const App = () => {
 
   // Sync to Server and LocalStorage
   useEffect(() => {
-    localStorage.setItem('cost_pro_reports', JSON.stringify(savedReports));
-    const synced = consolidateChecklists(savedReports, projects);
-    localStorage.setItem('cost_pro_projects', JSON.stringify(synced));
-    syncWithServer(savedReports, synced);
+    try {
+      localStorage.setItem('cost_pro_reports', JSON.stringify(savedReports));
+      const synced = consolidateChecklists(savedReports, projects);
+      localStorage.setItem('cost_pro_projects', JSON.stringify(synced));
+      syncWithServer(savedReports, synced);
+    } catch (err) {
+      console.error("Error persisting to localStorage:", err);
+    }
   }, [savedReports]);
 
   useEffect(() => {
@@ -358,24 +296,29 @@ const App = () => {
   const saveToHistory = () => {
     if (!reportData) return;
     
-    const newReport = {
-      id: `${activeProject?.name || 'obra'}-${selectedPeriod}-${Date.now()}`,
-      period: selectedPeriod,
-      reportType: selectedReportType,
-      data: reportData.sheets['Análisis por Categorías'],
-      productionData: reportData.sheets['Matriz de Producción'] || [],
-      fileName: reportMetadata.fileName,
-      saveDate: new Date().toISOString(),
-      metadata: { ...reportMetadata, reportType: selectedReportType },
-      projectId: activeProjectId || reportMetadata.projectId
-    };
+    try {
+      const newReport = {
+        id: `${activeProject?.name || 'obra'}-${selectedPeriod}-${Date.now()}`,
+        period: selectedPeriod,
+        reportType: selectedReportType,
+        data: reportData.sheets['Análisis por Categorías'],
+        productionData: reportData.sheets['Matriz de Producción'] || [],
+        fileName: reportMetadata.fileName,
+        saveDate: new Date().toISOString(),
+        metadata: { ...reportMetadata, reportType: selectedReportType },
+        projectId: activeProjectId || reportMetadata.projectId
+      };
 
-    setSavedReports(prev => {
-      const filtered = prev.filter(r => !(r.period === selectedPeriod && r.projectId === (activeProjectId || reportMetadata.projectId) && r.reportType === selectedReportType));
-      return [...filtered, newReport];
-    });
+      setSavedReports(prev => {
+        const filtered = prev.filter(r => !(r.period === selectedPeriod && r.projectId === (activeProjectId || reportMetadata.projectId) && r.reportType === selectedReportType));
+        return [...filtered, newReport];
+      });
 
-    alert(`Informe ${selectedReportType} del periodo ${selectedPeriod} guardado con éxito.`);
+      alert(`Informe ${selectedReportType} del periodo ${selectedPeriod} guardado con éxito.`);
+    } catch (err) {
+      console.error("Error saving report:", err);
+      alert("Error al guardar el informe. Verifique la consola.");
+    }
   };
 
   const loadFromHistory = (report) => {
@@ -415,17 +358,11 @@ const App = () => {
   };
 
   const exportJSON = () => {
-    const backup = {
-      reports: savedReports,
-      projects: projects,
-      exportDate: new Date().toISOString(),
-      version: "3.3"
-    };
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(savedReports, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `EIMI_CUB_BACKUP_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `COST_PRO_BACKUP_${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -440,20 +377,13 @@ const App = () => {
       reader.onload = (ev) => {
         try {
           const imported = JSON.parse(ev.target.result);
-          
-          if (imported.reports && imported.projects) {
-            // New format backup
-            setSavedReports(imported.reports);
-            setProjects(imported.projects);
-            alert("Respaldo restaurado con éxito.");
-          } else if (Array.isArray(imported)) {
-            // Legacy format or manual reports array
-             setSavedReports(prev => {
-                const existingIds = new Set(prev.map(r => r.id));
-                const news = imported.filter(r => !existingIds.has(r.id));
-                return [...prev, ...news];
-             });
-             alert("Informes importados e integrados.");
+          if (Array.isArray(imported)) {
+            setSavedReports(prev => {
+               const existingIds = new Set(prev.map(r => r.id));
+               const news = imported.filter(r => !existingIds.has(r.id));
+               return [...prev, ...news];
+            });
+            alert("Respaldo restaurado e integrado con éxito.");
           }
         } catch (err) {
           alert("El archivo de respaldo no es válido.");
@@ -479,15 +409,6 @@ const App = () => {
              onSelectProject={selectProject}
              activeProjectId={activeProjectId}
            />
-        )}
-
-        {activeTab === 'estructuras' && <StructureManager />}
-        
-        {activeTab === 'configuracion' && (
-          <ConfigModule 
-            onExportJSON={exportJSON} 
-            onImportJSON={importJSON} 
-          />
         )}
 
         {activeTab === 'analisis' && (
@@ -556,7 +477,7 @@ const App = () => {
                    >
                      📊 Resumen Costos
                    </button>
-                   <div className="ml-auto text-[9px] font-black text-slate-300 uppercase italic pr-4">Cost Pro Dashboard v3.3</div>
+                   <div className="ml-auto text-[9px] font-black text-slate-300 uppercase italic pr-4">Cost Pro Dashboard v3.2.2</div>
                 </div>
               </div>
             ) : (

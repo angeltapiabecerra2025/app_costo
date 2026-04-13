@@ -1028,11 +1028,18 @@
             }, []);
 
             useEffect(() => {
-                localStorage.setItem('cost_pro_reports', JSON.stringify(savedReports));
-                localStorage.setItem('cost_pro_projects', JSON.stringify(projects));
-                localStorage.setItem('cost_pro_types', JSON.stringify(reportTypes));
-                localStorage.setItem('cost_pro_structures', JSON.stringify(matrixStructures));
-                syncWithServer(savedReports, projects, reportTypes);
+                try {
+                    localStorage.setItem('cost_pro_reports', JSON.stringify(savedReports));
+                    localStorage.setItem('cost_pro_projects', JSON.stringify(projects));
+                    localStorage.setItem('cost_pro_types', JSON.stringify(reportTypes));
+                    localStorage.setItem('cost_pro_structures', JSON.stringify(matrixStructures));
+                    syncWithServer(savedReports, projects, reportTypes);
+                } catch (err) {
+                    console.error("Error persistiendo datos en localStorage:", err);
+                    if (err.name === 'QuotaExceededError') {
+                        console.warn("Límite de almacenamiento local excedido. Algunos datos podrían no guardarse.");
+                    }
+                }
             }, [savedReports, reportTypes, projects, matrixStructures]);
 
             useEffect(() => { if (activeProjId) localStorage.setItem('cost_pro_active_proj_id', activeProjId); }, [activeProjId]);
@@ -1430,21 +1437,36 @@
             };
 
             const saveReport = (isResetOnly) => {
-                if (isResetOnly === true) {
-                    setReportData(null); setReportMetadata({}); setIsHistoryView(false);
-                    return;
+                try {
+                    if (isResetOnly === true) {
+                        setReportData(null); 
+                        setReportMetadata({}); 
+                        setIsHistoryView(false);
+                        return;
+                    }
+
+                    if (!reportData || !reportData.sheets) {
+                        alert("Error: No hay datos de reporte cargados para guardar.");
+                        return;
+                    }
+
+                    const report = { 
+                        id: Date.now(), 
+                        ...reportMetadata, 
+                        data: reportData.sheets['Análisis por Categorías'] || [], 
+                        productionStructure: reportData.sheets['Matriz de Producción'] || { rows: [], fields: [], headerRow: [] },
+                        costStructure: reportData.sheets['Matriz de Costo'] || { rows: [], fields: [], headerRow: [] },
+                        resultStructure: reportData.sheets['Matriz de Resultado'] || { rows: [], fields: [], headerRow: [] },
+                        projectionStructure: reportData.sheets['Matriz de Proyección'] || { rows: [], fields: [], headerRow: [] },
+                        metadata: reportMetadata 
+                    };
+
+                    setSavedReports(prev => [...prev, report]);
+                    alert("Informe técnico consolidado y guardado correctamente.");
+                } catch (err) {
+                    console.error("Error crítico al guardar el informe:", err);
+                    alert("Se produjo un error al guardar el informe. Revise la consola para más detalles.");
                 }
-                const report = { 
-                    id: Date.now(), 
-                    ...reportMetadata, 
-                    data: reportData.sheets['Análisis por Categorías'], 
-                    productionStructure: reportData.sheets['Matriz de Producción'] || { rows: [], fields: [], headerRow: [] },
-                    costStructure: reportData.sheets['Matriz de Costo'] || { rows: [], fields: [], headerRow: [] },
-                    resultStructure: reportData.sheets['Matriz de Resultado'] || { rows: [], fields: [], headerRow: [] },
-                    projectionStructure: reportData.sheets['Matriz de Proyección'] || { rows: [], fields: [], headerRow: [] },
-                    metadata: reportMetadata 
-                };
-                setSavedReports([...savedReports, report]); alert("Informe técnico consolidado y guardado.");
             };
 
             return (
