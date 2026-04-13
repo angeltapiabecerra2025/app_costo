@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COST PRO v3.2 - Sistema de Control de Costos</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #0f172a; margin: 0; }
+        .font-heading { font-family: 'Outfit', sans-serif; }
+        .sidebar { width: 260px; position: fixed; left: 0; top: 0; height: 100vh; background: #0f172a; color: white; padding: 2rem 1.25rem; z-index: 100; }
+        .main-content { margin-left: 260px; padding: 2rem; min-height: 100vh; }
+        .analysis-table-container { width: 100%; overflow: auto; max-height: 80vh; background: white; border-radius: 2rem; border: 1px solid #e2e8f0; }
+        .analysis-table { width: max-content; border-collapse: separate; border-spacing: 0; font-size: 0.65rem; }
+        .analysis-table th { position: sticky; z-index: 20; border-right: 1px solid #e2e8f0; border-bottom: 2px solid #e2e8f0; }
+        .analysis-table td { padding: 6px 10px; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .sticky-col { position: sticky; left: 0; background: white !important; z-index: 10; font-weight: 800; border-right: 3px solid #cbd5e1 !important; }
+        .header-block-top { top: 0; height: 30px; z-index: 80; font-weight: 800; text-transform: uppercase; font-size: 0.55rem; color: #0f172a; }
+        .header-totals { top: 30px; height: 35px; z-index: 75; background: #0f172a !important; color: white !important; font-weight: 900; font-size: 0.65rem; text-align: right !important; }
+        .header-titles { top: 65px; height: 30px; z-index: 70; background: #f8fafc !important; font-weight: 700; color: #64748b; font-size: 0.55rem; text-transform: uppercase; }
+        .block-id { background: #f1f5f9 !important; border-top: 4px solid #94a3b8; }
+        .block-ingresos { background: #eff6ff !important; border-top: 4px solid #3b82f6; }
+        .block-prod { background: #ecfdf5 !important; border-top: 4px solid #10b981; }
+        .block-costos { background: #fffbeb !important; border-top: 4px solid #f59e0b; }
+        .block-proy { background: #faf5ff !important; border-top: 4px solid #a855f7; }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Excel Like Tabs */
+        .excel-tab { padding: 10px 32px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: all 0.2s; border-right: 1px solid #e2e8f0; position: relative; }
+        .excel-tab-active { background: white; color: #2563eb; }
+        .excel-tab-active::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: #2563eb; }
+        .excel-tab-inactive { color: #94a3b8; background: #f8fafc; }
+        .excel-tab-inactive:hover { color: #64748b; background: #f1f5f9; }
+        /* Production Matrix Excel Look */
+        .prod-table { border-collapse: collapse; width: 100%; font-size: 0.7rem; background: white; border: 1px solid #94a3b8; }
+        .prod-table th, .prod-table td { border: 1px solid #cbd5e1; padding: 6px 12px; }
+        .prod-group-row { background: #f1f5f9 !important; font-weight: 800; text-transform: uppercase; }
+        .prod-header-l1 { background: #e2e8f0; font-weight: 800; color: #475569; text-align: center; font-size: 0.75rem; }
+        .prod-header-l2 { background: #f8fafc; font-weight: 600; color: #94a3b8; }
+        /* Summary Table specific styles */
+        .summary-table { border-collapse: collapse; width: 100%; font-size: 0.85rem; border: 1px solid #e2e8f0; border-radius: 1.5rem; overflow: hidden; }
+        .summary-table th { background: #0f172a; color: white; padding: 1.5rem; text-align: left; text-transform: uppercase; font-weight: 900; font-size: 0.7rem; letter-spacing: 0.1em; }
+        .summary-table td { padding: 1rem 1.5rem; color: #334155; border-bottom: 1px solid #f1f5f9; }
+        .summary-group { background: #f8fafc; font-weight: 800; color: #0f172a; }
+        .summary-code { font-family: 'Monaco', 'Consolas', monospace; font-size: 0.7rem; color: #94a3b8; text-align: center; }
+        .server-status { position: fixed; top: 1rem; right: 1rem; padding: 0.5rem 1rem; border-radius: 9999px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 0.5rem; transition: all 0.3s; }
+        .status-online { background: #ecfdf5; color: #059669; border: 1px solid #10b98144; }
+        .status-offline { background: #fef2f2; color: #dc2626; border: 1px solid #ef444444; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+        /* Sync Scrollbar */
+        .top-scrollbar-container { width: 100%; overflow-x: auto; overflow-y: hidden; height: 12px; margin-bottom: 2px; z-index: 100; pointer-events: auto; }
+        .top-scrollbar-container::-webkit-scrollbar { height: 8px; }
+        .top-scrollbar-container::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+        .top-scrollbar-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; border: 2px solid #f1f5f9; }
+        .top-scrollbar-container::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .top-scrollbar-dummy { height: 1px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useMemo, useEffect } = React;
+
+        const formatCLP = (val, showSymbol = true) => {
+            if (typeof val !== 'number') return val;
+            const options = showSymbol ? { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 } : { minimumFractionDigits: 0, maximumFractionDigits: 0 };
+            return new Intl.NumberFormat('es-CL', options).format(val);
+        };
+
+        const Sidebar = ({ activeTab, onTabClick }) => (
+            <div className="sidebar flex flex-col shadow-2xl">
+                <div className="flex items-center gap-3 mb-10 px-2">
+                    <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-black text-white font-heading text-lg shadow-lg shadow-blue-600/20">C</div>
+                    <span className="font-heading font-extrabold text-white text-lg tracking-tight uppercase tracking-widest">COST PRO <span className="text-blue-500 text-xs">v3.2</span></span>
+                </div>
+                <nav className="flex-1 space-y-2">
+                    {[
+                        { id: 'dashboard', l: 'Dashboard', icon: '📊' },
+                        { id: 'obras', l: 'Gestión de Obras', icon: '🏗️' },
+                        { id: 'analisis', l: 'Análisis T.', icon: '📉' },
+                        { id: 'estructuras', l: 'Estructuras', icon: '🛠️' },
+                        { id: 'historial', l: 'Historial', icon: '🕒' },
+                        { id: 'config', l: 'Configuración', icon: '⚙️' }
+                    ].map(item => (
+                        <button key={item.id} onClick={() => onTabClick(item.id)} className={`w-full flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-300 ${activeTab === item.id ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/30' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+                            <span className="text-xl">{item.icon}</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">{item.l}</span>
+                        </button>
+                    ))}
+                </nav>
+            </div>
+        );
+
+        const ProjectManager = ({ projects, onAdd, onDelete, reportTypes = [] }) => {
+            const [isAdding, setIsAdding] = useState(false);
+            const [name, setName] = useState('');
+            const [code, setCode] = useState('');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                onAdd({ id: Date.now(), name, code, reports: reportTypes.map(n => ({ name: n, uploadedPeriods: [] })) });
+                setName(''); setCode(''); setIsAdding(false);
+            };
+
+            return (
+                <div className="animate-fade-in space-y-8 h-[90vh] overflow-auto pb-20 pr-4">
+                    <div className="flex justify-between items-end mb-10">
+                        <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none">Gestión de <span className="text-blue-600">Obras</span></h2>
+                        <button onClick={() => setIsAdding(true)} className="bg-blue-600 text-white font-black px-10 py-4 rounded-2xl shadow-xl shadow-blue-600/20 text-[11px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all">Nueva Obra</button>
+                    </div>
+                    {isAdding && (
+                        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-6">
+                            <div className="bg-white p-10 rounded-[3rem] w-full max-w-md shadow-2xl space-y-8">
+                                <h3 className="text-3xl font-black uppercase tracking-tight">Nueva Obra</h3>
+                                <form onSubmit={handleSubmit} className="space-y-6">
+                                    <div className="space-y-1"><p className="text-[10px] font-black uppercase text-slate-400 pl-1">Nombre Completo</p><input required className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl font-bold focus:border-blue-600 outline-none" value={name} onChange={e=>setName(e.target.value)} /></div>
+                                    <div className="space-y-1"><p className="text-[10px] font-black uppercase text-slate-400 pl-1">Código Identificador</p><input required className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl font-bold focus:border-blue-600 outline-none" value={code} onChange={e=>setCode(e.target.value)} /></div>
+                                    <div className="flex gap-4 pt-6">
+                                        <button type="button" onClick={()=>setIsAdding(false)} className="flex-1 font-black uppercase text-[11px] text-slate-400 hover:text-slate-600 transition-colors">Cancelar</button>
+                                        <button type="submit" className="flex-1 bg-blue-600 text-white p-5 rounded-2xl font-black uppercase text-[11px] shadow-lg shadow-blue-600/20">Confirmar</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                    <div className="grid grid-cols-1 gap-6">
+                        {projects.map(p => (
+                            <div key={p.id} className="bg-white p-10 rounded-[3rem] border border-slate-100 hover:border-blue-200 transition-all shadow-sm relative group">
+                                <button onClick={()=>onDelete(p.id)} className="absolute top-8 right-8 p-3 text-slate-200 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">🗑️</button>
+                                <div className="mb-10">
+                                    <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest">{p.code}</span>
+                                    <h4 className="text-3xl font-black uppercase mt-2 tracking-tight">{p.name}</h4>
+                                </div>
+                                <div className="grid grid-cols-4 gap-6 pt-10 border-t border-slate-50">
+                                    {p.reports.map((r, i) => {
+                                        const last = [...(r.uploadedPeriods || [])].sort().reverse()[0];
+                                        return (
+                                            <div key={i} className="flex flex-col gap-2">
+                                                <div className="flex justify-between items-center pr-2"><span className="text-[9px] font-black text-slate-400 uppercase truncate max-w-[120px]">{r.name}</span>{last && <span className="text-[8px] font-black text-emerald-500">✅</span>}</div>
+                                                <span className={`text-[8px] font-bold ${last ? 'text-slate-900' : 'text-amber-500 italic'}`}>{last ? `MES: ${last}` : 'Pendiente'}</span>
+                                                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden"><div className={`h-full transition-all duration-700 ${last ? 'bg-emerald-500 w-full' : 'bg-amber-400 w-1'}`}></div></div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const ReportTypeManager = ({ reportTypes, onUpdate }) => {
+            const [newType, setNewType] = useState('');
+            const [editingIndex, setEditingIndex] = useState(null);
+            const [editValue, setEditValue] = useState('');
+
+            const handleAdd = () => {
+                if (!newType.trim()) return;
+                onUpdate([...reportTypes, newType.trim()]);
+                setNewType('');
+            };
+
+            const handleDelete = (idx) => {
+                const confirmed = confirm(`¿Estás seguro de eliminar el tipo de informe "${reportTypes[idx]}"?\nEsto no eliminará los informes ya guardados, pero dejará de estar disponible para nuevos registros.`);
+                if (confirmed) {
+                    onUpdate(reportTypes.filter((_, i) => i !== idx));
+                }
+            };
+
+            const startEditing = (idx) => {
+                setEditingIndex(idx);
+                setEditValue(reportTypes[idx]);
+            };
+
+            const saveEdit = () => {
+                if (!editValue.trim()) return;
+                const updated = [...reportTypes];
+                updated[editingIndex] = editValue.trim();
+                onUpdate(updated);
+                setEditingIndex(null);
+            };
+
+            return (
+                <div className="animate-fade-in space-y-10 h-full overflow-auto pr-10 pb-32 p-10">
+                    <div className="space-y-2">
+                        <h2 className="text-5xl font-black uppercase tracking-tighter leading-none">Configuración de <span className="text-blue-600">Informes</span></h2>
+                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest pl-1">Personaliza los tipos de informes activos para la gestión de tus obras.</p>
+                    </div>
+
+                    <div className="bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-sm space-y-8 max-w-4xl">
+                        <div className="flex gap-4">
+                            <input 
+                                value={newType} 
+                                onChange={e=>setNewType(e.target.value)} 
+                                placeholder="Nombre del nuevo tipo de informe..."
+                                className="flex-1 bg-slate-50 border-2 border-slate-100 p-5 rounded-[1.5rem] font-bold text-[14px] focus:border-blue-600 outline-none"
+                            />
+                            <button onClick={handleAdd} className="bg-blue-600 text-white font-black px-12 py-5 rounded-[1.5rem] uppercase text-[12px] shadow-lg shadow-blue-600/20 active:scale-95 transition-all">Añadir Tipo</button>
+                        </div>
+
+                        <div className="grid gap-3">
+                            <p className="text-[10px] font-black uppercase text-slate-400 pl-4">Tipos de Informe Activos</p>
+                            {reportTypes.map((t, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 group transition-all hover:bg-white hover:border-blue-200">
+                                    {editingIndex === idx ? (
+                                        <div className="flex-1 flex gap-4 pr-10">
+                                            <input value={editValue} onChange={e=>setEditValue(e.target.value)} className="flex-1 p-2 bg-white border border-blue-500 rounded-lg font-bold text-sm outline-none" autoFocus />
+                                            <button onClick={saveEdit} className="text-[10px] font-black text-blue-600 uppercase">Guardar</button>
+                                            <button onClick={()=>setEditingIndex(null)} className="text-[10px] font-black text-slate-400 uppercase">Cancelar</button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-6 flex-1 pr-10">
+                                            <span className="text-lg opacity-40">📄</span>
+                                            <span className="font-black uppercase text-[12px] text-slate-900 leading-none">{t}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex gap-4">
+                                        {editingIndex !== idx && <button onClick={()=>startEditing(idx)} className="text-slate-200 hover:text-blue-600 font-bold text-xs p-2">Editar</button>}
+                                        <button onClick={()=>handleDelete(idx)} className="text-slate-200 hover:text-red-500 font-bold text-xs p-2">Eliminar</button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const AnalysisTable = ({ data = [], metadata = {}, onSave, isHistoryView }) => {
+            const tableRef = useRef();
+            const tableContainerRef = useRef();
+            const topScrollRef = useRef();
+            const [tableWidth, setTableWidth] = useState(0);
+
+            useEffect(() => {
+                if (tableRef.current) setTableWidth(tableRef.current.scrollWidth);
+            }, [data]);
+
+            const onTableScroll = () => {
+                if (topScrollRef.current) topScrollRef.current.scrollLeft = tableContainerRef.current.scrollLeft;
+            };
+
+            const onTopScroll = () => {
+                if (tableContainerRef.current) tableContainerRef.current.scrollLeft = topScrollRef.current.scrollLeft;
+            };
+
+            const blocks = [
+                { title: 'IDENTIFICACIÓN', cols: 6, cls: 'bg-white !text-slate-900 border-r border-slate-200' },
+                { title: 'VALORES INGRESO', cols: 6, cls: 'bg-white !text-slate-900 border-r border-slate-200' },
+                { title: 'PRODUCCIÓN ACTUAL', cols: 3, cls: 'bg-[#A9BEBD] !text-slate-900 border-r border-[#ffffff30]' },
+                { title: 'REGISTRO ANTERIOR DE PRODUCCIÓN', cols: 3, cls: 'bg-[#A9BEBD] !text-slate-900 border-r border-[#ffffff30]' },
+                { title: 'COSTO ACUMULADO ACTUAL', cols: 4, cls: 'bg-[#E3B89E] !text-slate-900 border-r border-[#ffffff30]' },
+                { title: 'COSTO ACUMULADO ANTERIOR', cols: 4, cls: 'bg-[#E3B89E] !text-slate-900 border-r border-[#ffffff30]' },
+                { title: 'PROYECCIÓN', cols: 5, cls: 'bg-[#CBA8A0] !text-slate-900' }
+            ];
+
+            const headers = [
+                { l: 'Cód', w: 80, s: true, path: 'identification.formato' },
+                { l: 'Sub-G', w: 100, s: true, path: 'identification.subgrupo' },
+                { l: 'N. Sub-G', w: 180, s: true, path: 'identification.nombreSubgrupo' },
+                { l: 'Cat', w: 60, s: true, path: 'identification.categoria' },
+                { l: 'N. Catego.', w: 280, s: true, path: 'identification.nombreCategoria' },
+                { l: 'Inc.', w: 60, s: true, path: 'identification.incluir' },
+                
+                { l: 'Presup.', w: 120, path: 'ingresos.presupuesto' },
+                { l: 'POM', w: 120, path: 'ingresos.pom' },
+                { l: 'Adic.', w: 120, path: 'ingresos.adicionales' },
+                { l: 'Reaj.', w: 120, path: 'ingresos.reajuste' },
+                { l: 'R. Proy.', w: 120, path: 'ingresos.reajusteProy' },
+                { l: 'TOTAL ING', w: 140, path: 'ingresos.finalProyectado', bold: true },
+                
+                { l: 'P. Acum', w: 120, path: 'prodActual.original' },
+                { l: 'P. Adic', w: 120, path: 'prodActual.adicionales' },
+                { l: 'TOTAL PROD', w: 140, path: 'prodActual.total', bold: true },
+                
+                { l: 'P. Ant', w: 120, path: 'prodAnterior.original' },
+                { l: 'A. Ant', w: 120, path: 'prodAnterior.adicionales' },
+                { l: 'TOTAL ANT', w: 140, path: 'prodAnterior.total', bold: true },
+
+                { l: 'C. Acum', w: 120, path: 'costosActual.acumulado' },
+                { l: 'C. Cam', w: 120, path: 'costosActual.cambio' },
+                { l: 'C. Prov', w: 120, path: 'costosActual.provisiones' },
+                { l: 'COSTO REAL', w: 140, path: 'costosActual.realActual', bold: true },
+
+                { l: 'C. Ant', w: 120, path: 'costosAnterior.acumulado' },
+                { l: 'CC. Ant', w: 120, path: 'costosAnterior.cambio' },
+                { l: 'CP. Ant', w: 120, path: 'costosAnterior.provisiones' },
+                { l: 'REAL ANT', w: 140, path: 'costosAnterior.realAnterior', bold: true },
+
+                { l: 'SALDO', w: 120, path: 'proy.proySaldo', bold: true },
+                { l: 'INV.', w: 120, path: 'proy.inventario' },
+                { l: 'PED.', w: 120, path: 'proy.pedidos' },
+                { l: 'C. SALDO', w: 120, path: 'proy.costoSaldo' },
+                { l: 'TOTAL PROY', w: 140, path: 'proy.proyTotalCosto', bold: true }
+            ];
+
+            const getValue = (obj, h) => {
+                if (h.calc) return h.calc(obj);
+                return h.path.split('.').reduce((acc, part) => acc && acc[part], obj);
+            };
+
+            const calculateTotal = (path, h) => {
+                return data.reduce((sum, row) => sum + (getValue(row, h) || 0), 0);
+            };
+
+            const getLeft = (idx) => headers.slice(0, idx).reduce((a, b) => a + b.w, 0);
+
+            return (
+                <div className="flex flex-col h-full animate-fade-in pr-4">
+                    <div className="flex justify-between items-center mb-6 bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 shrink-0">
+                        <div>
+                            <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-950 leading-none">{metadata.project}</h2>
+                            <p className="text-[9px] font-black uppercase text-blue-500 tracking-[0.3em] mt-2">Dossier de Control Técnico | {metadata.reportType} | Período: {metadata.period}</p>
+                        </div>
+                        {!isHistoryView && (
+                            <button onClick={onSave} className="bg-blue-600 text-white px-10 py-4 rounded-[1.5rem] font-black uppercase text-[11px] shadow-2xl shadow-blue-600/30 hover:scale-105 active:scale-95 transition-all tracking-widest">
+                                💾 Registrar Cierre Mensual
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Top Scrollbar Sync */}
+                    <div className="top-scrollbar-container" ref={topScrollRef} onScroll={onTopScroll}>
+                        <div className="top-scrollbar-dummy" style={{ width: tableWidth }}></div>
+                    </div>
+
+                    <div className="analysis-table-container flex-1" ref={tableContainerRef} onScroll={onTableScroll}>
+                        <table className="analysis-table" ref={tableRef}>
+                            <thead>
+                                {/* Row 1: Blocks */}
+                                <tr>
+                                    {blocks.map((b, i) => (
+                                        <th key={i} colSpan={b.cols} className={`${b.cls} header-block-top text-white border-r border-white/10 p-2 shadow-sm`}>{b.title}</th>
+                                    ))}
+                                </tr>
+                                {/* Row 2: Totals */}
+                                <tr>
+                                    {headers.map((h, i) => {
+                                        const isNum = (h.path || h.calc) && i >= 6;
+                                        const total = isNum ? calculateTotal(h.path, h) : null;
+                                        return (
+                                            <th key={i} 
+                                                className={`header-totals ${h.s ? 'sticky-col' : ''} border-r border-white/5`} 
+                                                style={{ minWidth: h.w, left: h.s ? getLeft(i) : 'auto', top: '30px' }}>
+                                                <div className="flex flex-col items-end pr-2 h-full justify-center">
+                                                    <span className="font-black text-[10px] leading-none">{typeof total === 'number' ? formatCLP(total, true) : ''}</span>
+                                                </div>
+                                            </th>
+                                        );
+                                    })}
+                                </tr>
+                                {/* Row 3: Titles */}
+                                <tr>
+                                    {headers.map((h, i) => (
+                                        <th key={i} 
+                                            className={`header-titles ${h.s ? 'sticky-col z-[30]' : ''} border-r border-slate-200`} 
+                                            style={{ minWidth: h.w, left: h.s ? getLeft(i) : 'auto', top: '65px' }}>
+                                            {h.l}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {data && data.length > 0 ? data.map((row, idx) => (
+                                    <tr key={idx} className="hover:bg-blue-50/30 transition-colors">
+                                        {headers.map((h, i) => {
+                                            const val = getValue(row, h);
+                                            const isNum = typeof val === 'number';
+                                            const isLast = i === headers.length - 1;
+                                            return (
+                                                <td key={i} className={`${h.s ? 'sticky-col' : ''} ${isLast ? 'bg-[#CBA8A0] text-slate-900 font-black text-right pr-4' : h.bold ? 'font-black text-slate-900 bg-slate-50' : 'text-slate-600'} ${isNum ? 'text-right' : ''}`} style={{ left: h.s ? getLeft(i) : 'auto' }}>
+                                                    {isNum ? formatCLP(val, false) : (val === undefined || val === null ? '---' : val)}
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                )) : (
+                                    <tr>
+                                        <td colSpan={headers.length} className="p-32 text-center text-slate-400 font-black uppercase text-[11px] tracking-[0.2em] bg-slate-50/50 italic border-4 border-dashed border-slate-100">
+                                            ⚠️ No se detectaron datos vinculables en este reporte. <br/>
+                                            <span className="text-[9px] mt-2 block opacity-60">Verifique que las columnas coincidan con la estructura maestra y que el archivo tenga datos en el periodo seleccionado.</span>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        };
+
+        const MatrixAnalysisTable = ({ structure = { rows: [], fields: [], headerRow: [] }, metadata = {}, onSave, isHistoryView, viewMode }) => {
+            const { rows, fields, headerRow } = structure;
+            
+            const isMainTitle = (row) => {
+                const codeIdx = fields.find(f => f.col === 'A')?.idx;
+                if (codeIdx === undefined) return false;
+                const code = row[codeIdx];
+                if (code === undefined || code === null || code === "") return false;
+                const c = String(code).trim();
+                const cleanCode = c.endsWith('.') ? c.slice(0, -1) : c;
+                const num = Number(cleanCode);
+                // ONLY ID 1.0 is the main total title
+                return num === 1;
+            };
+
+            const isSubCategory = (row) => {
+                const codeIdx = fields.find(f => f.col === 'A')?.idx;
+                const cIdx = fields.find(f => f.col === 'C')?.idx;
+                if (codeIdx === undefined || cIdx === undefined) return false;
+                
+                const cVal = String(row[cIdx] || "").trim().toUpperCase();
+                // Treat known super groups as sub-categories so they get bolded/styled
+                if (['COSTOS DIRECTOS', 'COSTOS INDIRECTOS', 'TOTALES', 'RESUMEN'].some(sg => cVal.includes(sg))) return true;
+
+                // Case 1: ID in A is an integer > 1
+                const code = String(row[codeIdx] || "").trim();
+                const cleanCode = code.endsWith('.') ? code.slice(0, -1) : code;
+                const num = Number(cleanCode);
+                if (!cleanCode.includes('.') && !isNaN(num) && Number.isInteger(num) && num > 1) return true;
+
+                // Case 2: Text in C starts with A- to K-
+                return /^[A-K]-/.test(cVal);
+            };
+
+            const getLabel = (f) => {
+                if (viewMode === 'produccion' && f.col === 'B') return '';
+                return f.label;
+            };
+
+            const getHierarchicalStyle = (row) => {
+                if (isMainTitle(row)) {
+                    const themes = {
+                        'produccion': 'bg-[#A9BEBD] text-slate-900 shadow-xl',
+                        'costo': 'bg-[#E3B89E] text-slate-900 shadow-xl',
+                        'resultado': 'bg-emerald-600 text-white shadow-xl',
+                        'proyeccion': 'bg-[#CBA8A0] text-slate-900 shadow-xl'
+                    };
+                    return (themes[viewMode] || 'bg-slate-900 text-white') + ' font-black uppercase tracking-tight';
+                }
+                if (isSubCategory(row)) {
+                    // Soft blue/gray (plomo) for sub-categories as requested
+                    const themes = {
+                        'produccion': 'bg-[#A9BEBD]/50 text-slate-900 border-b border-slate-300',
+                        'costo': 'bg-[#E3B89E]/60 text-slate-900 border-b border-[#E3B89E]',
+                        'resultado': 'bg-emerald-100/50 text-emerald-900 border-b border-emerald-200',
+                        'proyeccion': 'bg-[#CBA8A0]/50 text-slate-900 border-b border-[#CBA8A0]'
+                    };
+                    return (themes[viewMode] || 'bg-slate-100 text-slate-800') + ' font-bold uppercase italic tracking-wide';
+                }
+                return 'hover:bg-slate-50 transition-colors font-medium';
+            };
+
+            function formatCLP(v) { if (typeof v !== 'number') return v; return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(v); }
+
+            const theme = (() => {
+                const themes = {
+                    'produccion': { bg: 'bg-[#A9BEBD]', text: 'text-slate-900' },
+                    'costo': { bg: 'bg-[#E3B89E]', text: 'text-slate-900' },
+                    'resultado': { bg: 'bg-emerald-600', text: 'text-white' },
+                    'proyeccion': { bg: 'bg-[#CBA8A0]', text: 'text-slate-900' }
+                };
+                return themes[viewMode] || { bg: 'bg-slate-950', text: 'text-white' };
+            })();
+
+            return (
+                <div className="flex flex-col h-full animate-fade-in pr-4">
+                    <div className="flex justify-between items-center mb-6 bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 shrink-0">
+                        <div>
+                            <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-950 leading-none">{metadata.project}</h2>
+                            <p className="text-[9px] font-black uppercase text-blue-500 tracking-[0.3em] mt-2">Matriz de Gestión Estructurada | {metadata.reportType} | Período: {metadata.period}</p>
+                        </div>
+                        {!isHistoryView && (
+                            <button onClick={onSave} className="bg-blue-600 text-white px-10 py-4 rounded-[1.5rem] font-black uppercase text-[11px] shadow-2xl shadow-blue-600/30 hover:scale-105 active:scale-95 transition-all tracking-widest">
+                                💾 Registrar Cierre Mensual
+                            </button>
+                        )}
+                    </div>
+                    <div className="analysis-table-container flex-1 bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden flex flex-col">
+                        <div className="overflow-auto flex-1 custom-scrollbar">
+                            <table className="w-full text-left border-collapse table-auto border-l border-r border-black/20">
+                                <thead className="sticky top-0 z-50">
+                                    <tr className={theme.bg + " " + theme.text + " border-b border-black/20 uppercase font-black text-[9.5px] tracking-widest shadow-sm"}>
+                                        <th colSpan={1} className={`py-1 border-r border-black/20 sticky left-0 z-[60] ${theme.bg}`} style={{ left: '0' }}></th>
+                                        <th colSpan={3} className="py-1 border-r border-black/20"></th>
+                                        <th colSpan={3} className="py-1 border-r border-black/20 text-center">ACUMULADO</th>
+                                        <th colSpan={3} className="py-1 border-r border-black/20 text-center">ANTERIOR</th>
+                                        <th colSpan={3} className="py-1 border-r border-black/20 text-center">PERIODO</th>
+                                    </tr>
+                                    <tr className={theme.bg + " " + theme.text + " border-b-2 border-black/30 uppercase font-black text-[9px] shadow-sm"}>
+                                        {fields.filter(f => f.col >= 'B' && f.col <= 'N').map((f, i) => {
+                                            let label = headerRow?.[f.idx] || '';
+                                            // Sobreescritura forzada de títulos solicitada por el usuario (aplica para Producción y Costo "por ahora")
+                                            if (viewMode === 'produccion' || viewMode === 'costo') {
+                                                const overrides = {
+                                                    'C': '', 'D': 'PRESUPUESTO', 'E': 'POM',
+                                                    'F': 'PRODUCCION', 'G': 'ADICIONALES', 'H': 'TOTAL PROD. ACUM.',
+                                                    'I': 'PRODUCCION ANT.', 'J': 'ADIC. ANT.', 'K': 'TOTAL PROD. ANT.',
+                                                    'L': 'PRODUCCION', 'M': 'ADICIONALES', 'N': 'TOTAL PERIODO'
+                                                };
+                                                if (overrides[f.col] !== undefined) label = overrides[f.col];
+                                            }
+                                            return (
+                                                <th key={i} className={`py-2 px-2 border-r border-black/20 text-center ${f.col === 'C' ? 'whitespace-normal leading-tight' : 'whitespace-nowrap'} ${i < 1 ? 'sticky left-0 z-[60] ' + theme.bg : ''}`} style={{ left: i === 0 ? '0' : 'auto' }}>
+                                                    {label}
+                                                </th>
+                                            );
+                                        })}
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-black/20 border-b border-black/20">
+                                    {(rows || []).map((m, idx) => {
+                                        const mainTitle = isMainTitle(m);
+                                        const subTitle = isSubCategory(m);
+                                        const rowClass = getHierarchicalStyle(m);
+                                        
+                                        return (
+                                            <tr key={idx} className={rowClass + " transition-all"}>
+                                                {fields.filter(f => f.col >= 'B' && f.col <= 'N').map((f, i) => {
+                                                    const v = m[f.idx];
+                                                    const isNum = typeof v === 'number';
+                                                    let displayValue = isNum ? formatCLP(v) : (v || '---');
+                                                    
+                                                    if (f.col === 'A' && v && v !== '---') {
+                                                        const numV = parseFloat(String(v).replace(/,/g, ''));
+                                                        if (!isNaN(numV)) displayValue = numV.toFixed(1);
+                                                    }
+
+                                                    let stickyBgClass = 'bg-white';
+                                                    if (mainTitle) stickyBgClass = theme.bg;
+                                                    else if (subTitle) {
+                                                        const sThemes = { 'produccion': 'bg-[#D6E0E0]', 'costo': 'bg-[#F2DFD2]', 'resultado': 'bg-emerald-100', 'proyeccion': 'bg-[#EAD9D5]' };
+                                                        stickyBgClass = sThemes[viewMode] || 'bg-slate-100';
+                                                    }
+
+                                                    // Columna Plomo para D (Presupuesto) y E (POM) en todas las matrices
+                                                    const isTargetCol = (f.col === 'D' || f.col === 'E');
+                                                    let colBgClass = '';
+                                                    if (isTargetCol) {
+                                                        if (mainTitle || subTitle) {
+                                                            colBgClass = '!bg-slate-400 !text-slate-900 shadow-inner font-black'; // Plomo oscuro sólido para negritas, tapa al azul
+                                                        } else {
+                                                            colBgClass = '!bg-slate-200/50 !text-slate-700'; // Plomo claro para detalles
+                                                        }
+                                                    }
+
+                                                    return (
+                                                        <td key={i} className={`py-1 px-2 text-[9.5px] border-r border-black/20 ${f.col === 'C' ? 'whitespace-normal min-w-[200px] leading-tight' : 'whitespace-nowrap'} ${isNum ? 'text-right' : ''} ${colBgClass} ${i < 1 ? 'sticky left-0 z-10 ' + stickyBgClass : ''}`} style={{ left: i === 0 ? '0' : 'auto' }}>
+                                                            {displayValue}
+                                                        </td>
+                                                    );
+                                                })}
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const CostSummaryTable = ({ data = [] }) => {
+            if (!data.length) return <div className="p-32 text-center opacity-50 font-black text-slate-400 mt-10 uppercase tracking-widest text-[11px] border border-dashed rounded-[3rem]">No hay datos para el resumen de costos directos.</div>;
+            return (
+                <div className="animate-fade-in max-w-4xl mx-auto py-10">
+                    <table className="summary-table shadow-2xl bg-white">
+                        <thead>
+                            <tr>
+                                <th>Costos Directos (Concepto)</th>
+                                <th style={{textAlign:'center', width:'150px'}}>Código</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {data.map((row, idx) => (
+                                <tr key={idx} className={row.isGroup ? 'summary-group' : 'hover:bg-blue-50/10'}>
+                                    <td className={row.isGroup ? 'pl-6' : 'pl-16 opacity-80'}>{row.concept}</td>
+                                    <td className="summary-code">{row.code || '---'}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            );
+        };
+
+        const API_URL = 'http://localhost:3000/api';
+
+        const StructureManager = ({ structures, onUpdate, onAutoLoad }) => {
+            const [viewMode, setViewMode] = useState('list'); // 'list' or 'grid'
+            const [activeDetail, setActiveDetail] = useState(null);
+            const [isEditing, setIsEditing] = useState(false);
+            const [form, setForm] = useState({ id: null, name:'', sheetMatch:'', fields: [] });
+
+            const DataGridViewer = ({ structure, onBack }) => {
+                const rows = structure.masterRows || [];
+                const headers = Array.from({ length: 32 }, (_, i) => String.fromCharCode(65 + i)); // A-AF
+                
+                return (
+                    <div className="flex flex-col h-full animate-fade-in bg-white rounded-[3.5rem] shadow-2xl border border-slate-100 overflow-hidden m-[-2.5rem]">
+                        <div className="p-10 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                            <div>
+                                <h3 className="text-3xl font-black uppercase text-slate-950 tracking-tighter leading-none">{structure.name}</h3>
+                                <p className="text-[10px] font-black uppercase text-blue-500 tracking-[0.3em] mt-2">Vista de Matriz Maestra | {rows.length} Filas Totales</p>
+                            </div>
+                            <button onClick={onBack} className="bg-slate-950 text-white font-black px-10 py-5 rounded-2xl text-[11px] uppercase tracking-widest shadow-xl hover:bg-blue-600 transition-all">← Volver al Listado</button>
+                        </div>
+                        <div className="flex-1 overflow-auto bg-slate-900/5 custom-scrollbar">
+                            <table className="w-full text-left border-collapse table-fixed">
+                                <thead className="sticky top-0 z-10">
+                                    <tr className="bg-slate-950 text-white shadow-xl">
+                                        <th className="p-4 text-[9px] font-black uppercase tracking-widest border-r border-slate-800 text-center w-16">Fila</th>
+                                        {headers.map(h => (
+                                            <th key={h} className="p-4 text-[10px] font-black uppercase tracking-widest border-r border-slate-800 text-center w-40">{h}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {rows.map((row, rIdx) => (
+                                        <tr key={rIdx} className="hover:bg-blue-50/50 transition-colors group">
+                                            <td className="p-4 text-[10px] font-black text-slate-400 bg-slate-50 border-r border-slate-100 text-center sticky left-0 z-[5] shadow-[2px_0_10px_rgba(0,0,0,0.05)]">{rIdx + 1}</td>
+                                            {headers.map((_, cIdx) => (
+                                                <td key={cIdx} className="p-4 text-[11px] font-medium text-slate-500 border-r border-slate-50 truncate hover:bg-white transition-all">
+                                                    {String(row[cIdx] || '---')}
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                );
+            };
+
+            const onSave = () => {
+                if (form.id) onUpdate(structures.map(s => s.id === form.id ? form : s));
+                else onUpdate([...structures, { ...form, id: Date.now() }]);
+                setIsEditing(false); setSelected(null);
+            };
+
+            const addField = () => setForm({ ...form, fields: [...form.fields, { label: '', col: '' }] });
+            const removeField = (idx) => setForm({ ...form, fields: form.fields.filter((_, i) => i !== idx) });
+            const updateField = (idx, key, val) => setForm({ ...form, fields: form.fields.map((f, i) => i === idx ? { ...f, [key]: val } : f) });
+
+            const loadFromServer = onAutoLoad;
+
+            const exportTemplate = () => {
+                const wb = XLSX.utils.book_new();
+                if (structures.length > 0) {
+                    structures.forEach(s => {
+                        const ws = XLSX.utils.aoa_to_sheet(s.masterRows || []);
+                        XLSX.utils.book_append_sheet(wb, ws, s.sheetMatch || s.name);
+                    });
+                } else {
+                    // Create a baseline template if no structures exist
+                    const baseline = [
+                        ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N'],
+                        ['1', '-', 'TOTALES', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
+                        ['2', '0A00', 'A-MANO DE OBRA DIRECTA', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0']
+                    ];
+                    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(baseline), "Plantilla Base");
+                }
+                XLSX.writeFile(wb, "Plantilla_Estructuras_Matrices.xlsx");
+            };
+
+            const importExcel = () => {
+                const input = document.createElement('input'); input.type = 'file'; input.accept = '.xlsx';
+                input.onchange = (e) => {
+                    const file = e.target.files[0]; const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        const wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+                        const newStructures = wb.SheetNames.map((name, i) => {
+                            const sheet = wb.Sheets[name];
+                            const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                            const fields = (json[0] || []).map((h, colIdx) => ({ label: String(h), col: String.fromCharCode(65 + colIdx) })).filter(f => f.label.trim() !== '');
+                            return { id: Date.now() + i, name: `Matriz ${name}`, sheetMatch: name, fields, masterRows: json };
+                        });
+                        onUpdate(prev => [...prev.filter(s => !newStructures.some(ns => ns.sheetMatch === s.sheetMatch)), ...newStructures]);
+                        alert("Estructuras importadas desde Excel.");
+                    };
+                    reader.readAsArrayBuffer(file);
+                };
+                input.click();
+            };
+
+            return (
+                <div className="p-10 space-y-10 animate-fade-in overflow-auto h-full pr-10 pb-32">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h2 className="text-5xl font-black uppercase tracking-tighter leading-none">Mantenedor de <span className="text-blue-600">Estructuras</span></h2>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-2 pl-1">Define el mapeo de columnas para tus matrices de análisis.</p>
+                        </div>
+                        <div className="flex gap-4">
+                            <button onClick={exportTemplate} className="bg-slate-800 text-white font-black px-8 py-4 rounded-2xl text-[10px] uppercase shadow-lg shadow-slate-600/20 hover:bg-slate-700 transition-all">📥 Descargar Plantilla Base</button>
+                            <button onClick={importExcel} className="bg-emerald-600 text-white font-black px-8 py-4 rounded-2xl text-[10px] uppercase shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all">📂 Importar Planilla</button>
+                        </div>
+                    </div>
+
+                    {viewMode === 'grid' && activeDetail ? (
+                        <DataGridViewer structure={activeDetail} onBack={() => setViewMode('list')} />
+                    ) : isEditing ? (
+                        <div className="bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-2xl space-y-8 animate-fade-in">
+                            <div className="grid grid-cols-2 gap-8">
+                                <div className="space-y-2"><p className="text-[10px] font-black uppercase text-slate-400 pl-4">Nombre de la Estructura</p><input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full p-5 bg-slate-50 border border-slate-100 rounded-2xl font-black uppercase text-xs outline-none focus:border-blue-600" /></div>
+                                <div className="space-y-2"><p className="text-[10px] font-black uppercase text-slate-400 pl-4">Texto de Coincidencia de Hoja (Excel)</p><input value={form.sheetMatch} onChange={e => setForm({ ...form, sheetMatch: e.target.value })} className="w-full p-5 bg-slate-50 border border-slate-100 rounded-2xl font-black uppercase text-xs outline-none focus:border-blue-600" /></div>
+                            </div>
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center px-4">
+                                    <h4 className="font-black uppercase text-[12px] text-slate-900 tracking-widest">Mapeo de Campos</h4>
+                                    <button onClick={addField} className="text-blue-600 font-bold text-[11px] uppercase tracking-wider">+ Agregar Campo</button>
+                                </div>
+                                <div className="grid grid-cols-1 gap-3">
+                                    {form.fields.map((f, i) => (
+                                        <div key={i} className="flex gap-4 items-center bg-slate-50 p-4 rounded-2xl border border-slate-100 group">
+                                            <div className="flex-1 space-y-1"><p className="text-[9px] font-black text-slate-400 uppercase ml-2">Nombre del Campo</p><input value={f.label} onChange={e => updateField(i, 'label', e.target.value)} className="w-full bg-transparent font-black uppercase text-[11px] outline-none" /></div>
+                                            <div className="w-24 space-y-1"><p className="text-[9px] font-black text-slate-400 uppercase text-center">Col. Excel</p><input value={f.col} onChange={e => updateField(i, 'col', e.target.value.toUpperCase())} className="w-full bg-transparent font-black uppercase text-[11px] text-center outline-none" /></div>
+                                            <button onClick={() => removeField(i)} className="p-2 opacity-0 group-hover:opacity-100 text-red-500 transition-all font-bold">×</button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-4 pt-6">
+                                <button onClick={() => setIsEditing(false)} className="px-10 py-4 font-black uppercase text-[11px] text-slate-400">Cancelar</button>
+                                <button onClick={onSave} className="px-12 py-5 bg-blue-600 text-white rounded-2xl font-black uppercase text-[12px] shadow-xl shadow-blue-600/20">Guardar Estructura</button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 gap-8">
+                            {structures.map(s => (
+                                <div key={s.id} className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm flex justify-between items-center group hover:border-blue-200 transition-all">
+                                    <div>
+                                        <h4 className="text-2xl font-black uppercase tracking-tight text-slate-950">{s.name}</h4>
+                                        <div className="flex gap-4 mt-1 italic">
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none border-r border-slate-200 pr-4">Hoja: {s.sheetMatch}</p>
+                                            <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest leading-none">{s.masterRows?.length || 0} Filas Maestras</p>
+                                        </div>
+                                        <div className="flex gap-2 mt-4 flex-wrap">
+                                            {s.fields.slice(0, 5).map((f, i) => (
+                                                <span key={i} className="bg-slate-100 text-slate-500 px-3 py-1 rounded-lg text-[9px] font-black uppercase">{f.label}: {f.col}</span>
+                                            ))}
+                                            {s.fields.length > 5 && <span className="bg-slate-50 text-slate-300 px-3 py-1 rounded-lg text-[9px] font-black uppercase">+{s.fields.length - 5} más</span>}
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        <button onClick={() => { setActiveDetail(s); setViewMode('grid'); }} className="p-3 bg-blue-50 text-blue-600 rounded-xl font-black text-[10px] uppercase shadow-sm hover:bg-blue-600 hover:text-white transition-all">👁️ Explorar Datos</button>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => { setForm(s); setIsEditing(true); }} className="flex-1 p-3 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase opacity-0 group-hover:opacity-100 transition-all">Editar</button>
+                                            <button onClick={() => onUpdate(structures.filter(st => st.id !== s.id))} className="p-3 text-red-500 font-black text-[10px] uppercase opacity-0 group-hover:opacity-100 transition-all">Borrar</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const ServerStatus = ({ online }) => (
+            <div className={`server-status ${online ? 'status-online' : 'status-offline'}`}>
+                <div className={`w-2 h-2 rounded-full ${online ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></div>
+                {online ? 'Servidor Conectado' : 'Modo Navegador (Guardado Local)'}
+            </div>
+        );
+
+        const App = () => {
+
+
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [activeSubTab, setActiveSubTab] = useState('categorias');
+            const [reportData, setReportData] = useState(null);
+            const [matrixStructures, setMatrixStructures] = useState([]);
+            const [reportMetadata, setReportMetadata] = useState({});
+            const [savedReports, setSavedReports] = useState([]);
+            const [projects, setProjects] = useState([]);
+            const [activeProjId, setActiveProjId] = useState(() => localStorage.getItem('cost_pro_active_proj_id') || null);
+            const [reportTypes, setReportTypes] = useState(["Informe de Costos", "Informe de Provisión de Finiquitos", "Informe Mensual", "Flujo de Obra", "Informe de Proyección de Ingreso", "Control de Estados de Pagos", "Estatus de Facturación", "Informe Fotográfico", "Matriz de Proyección"]);
+            const [selectedType, setSelectedType] = useState(() => localStorage.getItem('cost_pro_active_type') || 'Informe Mensual');
+            const [period, setPeriod] = useState(() => localStorage.getItem('cost_pro_active_period') || new Date().toISOString().slice(0, 7));
+            const [isHistoryView, setIsHistoryView] = useState(false);
+            const [serverOnline, setServerOnline] = useState(false);
+            const [filterProj, setFilterProj] = useState('all');
+            const [filterType, setFilterType] = useState('all');
+            const inputRef = useRef();
+
+            const fetchOfficialStructure = async (silent = false) => {
+                try {
+                    const res = await fetch('template/Estructura_Matrices.xlsx');
+                    if (!res.ok) return;
+                    const blob = await res.blob();
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        const wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+                        const newStructures = wb.SheetNames.map((name, i) => {
+                            const sheet = wb.Sheets[name];
+                            const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                            const fields = (json[0] || []).map((h, colIdx) => ({ label: String(h), col: String.fromCharCode(65 + colIdx) })).filter(f => f.label.trim() !== '');
+                            return { id: Date.now() + i, name: `Matriz ${name}`, sheetMatch: name, fields, masterRows: json };
+                        });
+                        setMatrixStructures(prev => [...prev.filter(s => !newStructures.some(ns => ns.sheetMatch === s.sheetMatch)), ...newStructures]);
+                        if (!silent) alert("Estructuras Maestras actualizadas correctamente.");
+                    };
+                    reader.readAsArrayBuffer(blob);
+                } catch (err) { console.error("Auto-load failed:", err); }
+            };
+
+            // Initial load of components (Sync)
+            useEffect(() => {
+                const storedTypes = JSON.parse(localStorage.getItem('cost_pro_types'));
+                if (storedTypes && storedTypes.length > 0) setReportTypes(storedTypes);
+                
+                const localStructures = JSON.parse(localStorage.getItem('cost_pro_structures') || '[]');
+                if (localStructures.length > 0) {
+                    setMatrixStructures(localStructures);
+                } else {
+                    fetchOfficialStructure(true); // Auto-load ONLY if empty
+                }
+            }, []);
+
+            const processedProjects = useMemo(() => {
+                const activeTypes = reportTypes;
+                return projects.map(p => ({
+                    ...p,
+                    reports: activeTypes.map(name => {
+                        const uploadedPeriods = savedReports
+                            .filter(r => r.projectId == p.id && r.reportType === name)
+                            .map(r => r.period);
+                        return { name, uploadedPeriods: [...new Set(uploadedPeriods)] };
+                    })
+                }));
+            }, [savedReports, projects, reportTypes]);
+
+            const syncWithServer = async (reps, projs, types) => {
+                if (!serverOnline) return;
+                try {
+                    await fetch(`${API_URL}/save`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ reports: reps, projects: projs, reportTypes: types || reportTypes })
+                    });
+                } catch (err) {
+                    console.error("Error syncing with server:", err);
+                }
+            };
+
+            const exportJSON = () => {
+                const data = JSON.stringify({ reports: savedReports, projects: projects, reportTypes: reportTypes }, null, 2);
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `COST_PRO_BACKUP_${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+
+            const importJSON = () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        try {
+                            const imported = JSON.parse(ev.target.result);
+                            // Detect legacy import vs new object backup
+                            const reps = Array.isArray(imported) ? imported : (imported.reports || []);
+                            const projs = imported.projects || projects;
+                            const types = imported.reportTypes || reportTypes;
+
+                            setSavedReports(prev => {
+                                const existingIds = new Set(prev.map(r => r.id));
+                                const news = reps.filter(r => !existingIds.has(r.id));
+                                return [...prev, ...news];
+                            });
+                            if (imported.reportTypes) setReportTypes(types);
+                            if (imported.projects) setProjects(projs);
+
+                            alert("Respaldo restaurado con éxito.");
+                        } catch (err) { alert("Archivo no válido."); }
+                    };
+                    reader.readAsText(file);
+                };
+                input.click();
+            };
+
+            useEffect(() => {
+                const checkHealth = async () => {
+                    try {
+                        const resp = await fetch(`${API_URL}/health`);
+                        const data = await resp.json();
+                        if (data.status === 'ok') setServerOnline(true);
+                    } catch (e) {
+                        setServerOnline(false);
+                    }
+                };
+                
+                const loadDataFromLocal = () => {
+                    const localReps = JSON.parse(localStorage.getItem('cost_pro_reports') || '[]');
+                    const localProjs = JSON.parse(localStorage.getItem('cost_pro_projects') || '[]');
+                    const localTypes = JSON.parse(localStorage.getItem('cost_pro_types'));
+                    const localActiveData = JSON.parse(localStorage.getItem('cost_pro_active_data'));
+                    const localActiveMeta = JSON.parse(localStorage.getItem('cost_pro_active_meta'));
+
+                    if (localReps.length > 0) setSavedReports(localReps);
+                    if (localProjs.length > 0) setProjects(localProjs);
+                    if (localTypes && localTypes.length > 0) setReportTypes(localTypes);
+                    const localStructures = JSON.parse(localStorage.getItem('cost_pro_structures') || '[]');
+                    if (localStructures.length > 0) setMatrixStructures(localStructures);
+                };
+
+                const syncFromServer = async () => {
+                    try {
+                        const resp = await fetch(`${API_URL}/data`);
+                        const data = await resp.json();
+                        
+                        setSavedReports(prev => {
+                            if (data.reports?.length > prev.length) return data.reports;
+                            return prev;
+                        });
+                        setProjects(prev => {
+                            if (data.projects?.length > prev.length) return data.projects;
+                            return prev;
+                        });
+                        if (data.reportTypes?.length > 0) setReportTypes(data.reportTypes);
+                        setServerOnline(true);
+                    } catch (err) {
+                        console.warn("Could not sync from server, utilizing local state.");
+                    }
+                };
+                
+                loadDataFromLocal();
+                checkHealth();
+                syncFromServer();
+                const interval = setInterval(checkHealth, 5000);
+                return () => clearInterval(interval);
+            }, []);
+
+            useEffect(() => {
+                const localStructures = JSON.parse(localStorage.getItem('cost_pro_structures') || '[]');
+                if (localStructures.length > 0) setMatrixStructures(localStructures);
+            }, []);
+
+            useEffect(() => {
+                localStorage.setItem('cost_pro_reports', JSON.stringify(savedReports));
+                localStorage.setItem('cost_pro_projects', JSON.stringify(projects));
+                localStorage.setItem('cost_pro_types', JSON.stringify(reportTypes));
+                localStorage.setItem('cost_pro_structures', JSON.stringify(matrixStructures));
+                syncWithServer(savedReports, projects, reportTypes);
+            }, [savedReports, reportTypes, projects, matrixStructures]);
+
+            useEffect(() => { if (activeProjId) localStorage.setItem('cost_pro_active_proj_id', activeProjId); }, [activeProjId]);
+            useEffect(() => { if (selectedType) localStorage.setItem('cost_pro_active_type', selectedType); }, [selectedType]);
+            useEffect(() => { if (period) localStorage.setItem('cost_pro_active_period', period); }, [period]);
+
+
+            const changeTabAndReset = (tabId) => {
+                if (tabId === 'analisis') { 
+                    setReportData(null); 
+                    setReportMetadata({}); 
+                    setIsHistoryView(false); 
+                    setActiveSubTab('categorias'); 
+                }
+                setActiveTab(tabId);
+            };
+
+            const colToIdx = (col) => {
+                if (!col) return -1;
+                let res = 0;
+                for (let j = 0; j < col.length; j++) {
+                    res = res * 26 + col.charCodeAt(j) - 64;
+                }
+                return res - 1;
+            };
+
+            const handleFile = (e) => {
+                const file = e.target.files[0]; if (!file || !activeProjId) return;
+                const activeProj = projects.find(p=>p.id==activeProjId);
+                if (!activeProj) { alert("Error: Proyecto no encontrado. Por favor seleccione una obra válida."); return; }
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    try {
+                        const wb = XLSX.read(new Uint8Array(ev.target.result), { type:'array' });
+                        const resData = { sheets: {} };
+                        
+                        // 1. PHASE 1: Find and parse "Análisis por Categorías" with FIXED MAPPING
+                        const catSheetName = wb.SheetNames.find(n => n.toLowerCase().includes('categor'));
+                        if (!catSheetName) {
+                            alert("Atención: No se encontró la hoja 'Análisis por Categorías' en el archivo. Verifique el formato.");
+                            return;
+                        }
+
+                        const catJson = XLSX.utils.sheet_to_json(wb.Sheets[catSheetName], { header:1, defval:'' });
+                        
+                        // User specifically requested Row 7 downwards (index 6+)
+                        // We filter by Row 7+ and ensure Col A has a value
+                        const catRows = catJson.slice(6).filter(r => r[0] !== undefined && r[0] !== "");
+
+                        const mainReportData = catRows.map(r => {
+                            const val = (idx) => {
+                                let v = r[idx];
+                                if (v === undefined || v === null || v === '') return 0;
+                                if (typeof v === 'string') {
+                                    const parsed = parseFloat(v.replace(/[^0-9.-]/g, ''));
+                                    return isNaN(parsed) ? 0 : parsed;
+                                }
+                                return Number(v) || 0;
+                            };
+                            
+                            // G:6, H:7, I:8, J:9, K:10, L:11
+                            const totalIngreso = val(7) + val(8) + val(9) + val(10);
+                            
+                            // M:12, N:13, O:14
+                            const totalProd = val(12) + val(13);
+                            
+                            // P:15, Q:16, R:17
+                            const totalAnt = val(15) + val(16);
+                            
+                            // S:18, T:19, U:20, V:21
+                            const costoReal = val(18) + val(19) + val(20);
+                            
+                            // W:22, X:23, Y:24, Z:25
+                            const costoRealAnt = val(22) + val(23) + val(24);
+                            
+                            // AA:26 (H+I+J+K) - (M+N)
+                            const proySaldo = totalIngreso - totalProd;
+                            
+                            // AB:27, AC:28, AD:29, AE:30
+                            const proyTotalCosto = val(27) + val(28) + val(29);
+
+                            return {
+                                identification: { formato: r[0], subgrupo: r[1], nombreSubgrupo: r[2], categoria: r[3], nombreCategoria: r[4], incluir: r[5] },
+                                ingresos: { presupuesto: val(6), pom: val(7), adicionales: val(8), reajuste: val(9), reajusteProy: val(10), finalProyectado: totalIngreso },
+                                prodActual: { original: val(12), adicionales: val(13), total: totalProd },
+                                prodAnterior: { original: val(15), adicionales: val(16), total: totalAnt },
+                                costosActual: { acumulado: val(18), cambio: val(19), provisiones: val(20), realActual: costoReal },
+                                costosAnterior: { acumulado: val(22), cambio: val(23), provisiones: val(24), realAnterior: costoRealAnt },
+                                proy: { proySaldo, inventario: val(27), pedidos: val(28), costoSaldo: val(29), proyTotalCosto: proyTotalCosto }
+                            };
+                        });
+                        resData.sheets['Análisis por Categorías'] = mainReportData;
+
+                        // 2. PHASE 2: Map Management Matrices using MASTER STRUCTURES & EXCEL FILE DATA
+                        ['Matriz de Producción', 'Matriz de Costo', 'Matriz de Resultado', 'Matriz de Proyección'].forEach(name => {
+                            // Find matching structure/template from Manager
+                            const struct = matrixStructures.find(s => {
+                                const sName = (s.name || '').toLowerCase();
+                                const sMatch = (s.sheetMatch || '').toLowerCase();
+                                const target = name.toLowerCase();
+                                if (target.includes('producción')) return sName.includes('produccion') || sMatch.includes('produccion');
+                                if (target.includes('costo')) return sName.includes('costo') || sMatch.includes('costo');
+                                if (target.includes('resultado')) return sName.includes('resultado') || sMatch.includes('resultado');
+                                if (target.includes('proyección')) return sName.includes('proy') || sMatch.includes('proy');
+                                return false;
+                            });
+                            
+                            if (struct) {
+                                // Extract field mapping with indexes (Parameterization)
+                                const fieldsWithIdx = struct.fields.map(f => ({ ...f, idx: colToIdx(f.col) }));
+                                
+                                // Search for matching sheet in the UPLOADED FILE (Accent insensitive)
+                                const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+                                const targetMatch = normalize(name.replace('Matriz de ', ''));
+                                const sheetInFile = wb.SheetNames.find(n => normalize(n).includes(targetMatch));
+                                let rowsToSave = [];
+
+                                if (sheetInFile) {
+                                    const json = XLSX.utils.sheet_to_json(wb.Sheets[sheetInFile], { header: 1, defval: '' });
+                                    // User requested reading A to N (14 Columns, indices 0-13)
+                                    // Header Row is at index 0 (Row 1)
+                                    const headerToSave = (json[0] || []).slice(0, 14);
+                                    
+                                    // MERGE LOGIC: Start with Template Rows, update with Excel Data where ID matches
+                                    const excelRows = json.map(r => r.slice(0, 14));
+                                    let finalRows = (struct.masterRows || []).slice(1).map(sRow => {
+                                        const sId = String(sRow[0] || "").trim();
+                                        const match = excelRows.find(eRow => String(eRow[0] || "").trim() === sId);
+                                        let mappedRow = sRow;
+                                        if (match) {
+                                            // Merge: prioritize match data but keep sRow structure if match is empty
+                                            mappedRow = sRow.map((colVal, idx) => {
+                                                const matchVal = match[idx];
+                                                return (matchVal !== undefined && matchVal !== "") ? matchVal : colVal;
+                                            });
+                                        }
+
+                                        // --- 1. LÓGICA SUMAR.SI.CONJUNTO APLICADA A TODAS LAS MATRICES ---
+                                        const codeColB = String(mappedRow[1] || "").trim(); // Columna B (Sub-G / Código)
+                                        const conceptColC = String(mappedRow[2] || "").trim(); // Columna C (Concepto)
+                                        
+                                        // Es grupo si el código termina en '00' o si el concepto está todo en mayúsculas
+                                        const isGroup = !codeColB || codeColB.endsWith('00') || (conceptColC && conceptColC.toUpperCase() === conceptColC);
+                                        
+                                        // Aplicar SUMAR.SI.CONJUNTO a filas de detalle
+                                        if (!isGroup) {
+                                            if (resData.sheets['Análisis por Categorías']) {
+                                                const cats = resData.sheets['Análisis por Categorías'].filter(c => String(c.identification.subgrupo || "").trim() === codeColB);
+                                                
+                                                mappedRow = [...mappedRow]; // Clonar para mutar
+                                                const sum = (pathExtractor) => cats.reduce((s, c) => s + (pathExtractor(c) || 0), 0);
+                                                
+                                                // La suma de PRESUPUESTO y POM va en la Columna D (Índice 3) y E (Índice 4) para TODAS las matrices
+                                                mappedRow[3] = sum(c => c.ingresos.presupuesto);
+                                                mappedRow[4] = sum(c => c.ingresos.finalProyectado);
+
+                                                // LÓGICA EXCLUSIVA PARA MATRIZ DE PRODUCCIÓN
+                                                if (name === 'Matriz de Producción') {
+                                                    mappedRow[5]  = sum(c => c.prodActual.original);      // F (P.Acum)
+                                                    mappedRow[6]  = sum(c => c.prodActual.adicionales);   // G (P.Adic)
+                                                    mappedRow[7]  = mappedRow[5] + mappedRow[6];          // H (Total)
+                                                    mappedRow[8]  = sum(c => c.prodAnterior.original);    // I (P.Ant)
+                                                    mappedRow[9]  = sum(c => c.prodAnterior.adicionales); // J (A.Ant)
+                                                    mappedRow[10] = mappedRow[8] + mappedRow[9];          // K (Total Ant)
+                                                    mappedRow[11] = mappedRow[5] - mappedRow[8];          // L (Prod. Per)
+                                                    mappedRow[12] = mappedRow[6] - mappedRow[9];          // M (Adic. Per)
+                                                    mappedRow[13] = mappedRow[11] + mappedRow[12];        // N (Total Per)
+                                                }
+                                                // LÓGICA EXCLUSIVA PARA MATRIZ DE COSTO
+                                                else if (name === 'Matriz de Costo') {
+                                                    // ACUMULADO ACTUAL
+                                                    mappedRow[5]  = sum(c => (c.costosActual.acumulado || 0) + (c.costosActual.cambio || 0)); // F (Costo)
+                                                    mappedRow[6]  = sum(c => c.costosActual.provisiones || 0); // G (Provisión)
+                                                    mappedRow[7]  = mappedRow[5] + mappedRow[6]; // H (Total Acum)
+                                                    
+                                                    // COSTO ANTERIOR
+                                                    mappedRow[8]  = sum(c => (c.costosAnterior.acumulado || 0) + (c.costosAnterior.cambio || 0)); // I (Costo Ant)
+                                                    mappedRow[9]  = sum(c => c.costosAnterior.provisiones || 0); // J (Provisión Ant)
+                                                    mappedRow[10] = mappedRow[8] + mappedRow[9]; // K (Total Ant)
+                                                    // COSTO PERIODO (Actual - Anterior)
+                                                    mappedRow[11] = mappedRow[5] - mappedRow[8]; // L (Costo Periodo)
+                                                    mappedRow[12] = mappedRow[6] - mappedRow[9]; // M (Provisión Periodo)
+                                                    mappedRow[13] = mappedRow[11] + mappedRow[12]; // N (Total Periodo)
+                                                }
+                                            }
+                                        }
+
+                                        // Ajuste específico de Interfaz: "COSTOS DIRECTOS" 
+                                        if (name === 'Matriz de Producción' && (conceptColC === 'COSTOS DIRECTOS' || (!codeColB && conceptColC.includes('COSTOS DIRECTOS')))) {
+                                            mappedRow = [...mappedRow];
+                                            mappedRow[1] = ''; 
+                                            mappedRow[2] = 'COSTOS DIRECTOS'; // Forzar que aparezca bajo la columna "C"
+                                        }
+
+                                        return mappedRow;
+                                    });
+
+                                    // --- 2. SUMAR LOS DETALLES HACIA LOS GRUPOS PADRE (Ej: 0A00 suma 0A01, 0A02...) ---
+                                    finalRows = finalRows.map(row => {
+                                        const codeColB = String(row[1] || "").trim();
+                                        const conceptColC = String(row[2] || "").trim();
+                                        const isGroup = !codeColB || codeColB.endsWith('00') || (conceptColC && conceptColC.toUpperCase() === conceptColC);
+                                        
+                                        if (isGroup && codeColB.endsWith('00')) {
+                                            const prefix = codeColB.substring(0, codeColB.length - 2); // ej: de '0A00' extrae '0A'
+                                            const groupRow = [...row];
+                                            
+                                            // Para todas las matrices sumamos las 11 columnas numéricas (índices 3 al 13)
+                                            const colsToSum = [3,4,5,6,7,8,9,10,11,12,13];
+                                            
+                                            colsToSum.forEach(colIdx => {
+                                                groupRow[colIdx] = finalRows.reduce((acc, r) => {
+                                                    const childCode = String(r[1] || "").trim();
+                                                    const childConcept = String(r[2] || "").trim();
+                                                    const childIsGroup = !childCode || childCode.endsWith('00') || (childConcept && childConcept.toUpperCase() === childConcept);
+                                                    
+                                                    if (!childIsGroup && childCode.startsWith(prefix)) {
+                                                        return acc + (Number(r[colIdx]) || 0);
+                                                    }
+                                                    return acc;
+                                                }, 0);
+                                            });
+
+                                            return groupRow;
+                                        }
+                                        return row; // Si no es grupo o es '1F00' pero se tratará después
+                                    });
+
+                                    // --- 3. SÚPER-GRUPOS GLOBALES (Costos Directos, Indirectos, Totales) ---
+                                    const superColsToSum = [3,4,5,6,7,8,9,10,11,12,13];
+                                    
+                                    const sumDetailsByPrefixes = (prefixes) => {
+                                        const sums = {};
+                                        superColsToSum.forEach(c => sums[c] = 0);
+                                        finalRows.forEach(r => {
+                                            const rCode = String(r[1] || "").trim();
+                                            const rConcept = String(r[2] || "").trim();
+                                            const isChildGroup = !rCode || rCode.endsWith('00') || (rConcept && rConcept.toUpperCase() === rConcept);
+                                            if (!isChildGroup) {
+                                                if (prefixes.some(p => rCode.startsWith(p))) {
+                                                    superColsToSum.forEach(c => sums[c] += (Number(r[c]) || 0));
+                                                }
+                                            }
+                                        });
+                                        return sums;
+                                    };
+
+                                    // COSTOS DIRECTOS: suma 0A, 0B, 0C, 0D, 0E, 0X... genérico para todo código de detalle que empiece por 0 (ej: 0A01, 0C05)
+                                    const sumsCD = sumDetailsByPrefixes(['0A', '0B', '0C', '0D', '0E', '0X']);
+                                    // 1F00 suma sus detalles
+                                    const sums1F = sumDetailsByPrefixes(['1F', '1G', '1H', '1I', '1J', '1K']);
+                                    // TOTALES suma Costos Directos + 1F00 (o sea, todos los anteriores)
+                                    const sumsTOT = sumDetailsByPrefixes(['0A', '0B', '0C', '0D', '0E', '0X', '1F', '1G', '1H', '1I', '1J', '1K']);
+
+                                    finalRows = finalRows.map(row => {
+                                        const conceptColC = String(row[2] || "").trim();
+                                        const codeColB = String(row[1] || "").trim();
+                                        let r = [...row];
+
+                                        if (conceptColC === 'COSTOS DIRECTOS') {
+                                            superColsToSum.forEach(c => r[c] = sumsCD[c]);
+                                        } else if (conceptColC === 'COSTOS INDIRECTOS' || conceptColC.includes('COSTOS INDIRECTOS')) {
+                                            superColsToSum.forEach(c => r[c] = sums1F[c]);
+                                        } else if (conceptColC.includes('TOTALES') || conceptColC === 'RESUMEN' || conceptColC.includes('TOTAL COSTO')) {
+                                            superColsToSum.forEach(c => r[c] = sumsTOT[c]);
+                                        }
+                                        return r;
+                                    });
+
+                                    // --- 4. EXCLUIR FILAS QUE TENGAN PRESUPUESTO $0 ---
+                                    finalRows = finalRows.filter(row => {
+                                        // "la regla ahi es que si en la columna D el valor que trae es igual a 0 entonces oculte toda la fila"
+                                        const presupuesto = Number(row[3]) || 0;
+                                        if (presupuesto === 0) {
+                                            return false;
+                                        }
+                                        return true; 
+                                    });
+
+                                    let customHeaderRow = [...headerToSave];
+                                    if (name === 'Matriz de Producción') {
+                                        customHeaderRow[2] = ''; // Col C
+                                        customHeaderRow[3] = 'PRESUPUESTO'; // Col D
+                                        customHeaderRow[4] = 'POM'; // Col E
+                                        customHeaderRow[5] = 'PRODUCCION'; // Col F
+                                        customHeaderRow[6] = 'ADICIONALES'; // Col G
+                                        customHeaderRow[7] = 'TOTAL PROD. ACUM.'; // Col H
+                                        customHeaderRow[8] = 'PRODUCCION ANT.'; // Col I
+                                        customHeaderRow[9] = 'ADIC. ANT.'; // Col J
+                                        customHeaderRow[10] = 'TOTAL PROD. ANT.'; // Col K
+                                        customHeaderRow[11] = 'PRODUCCION'; // Col L
+                                        customHeaderRow[12] = 'ADICIONALES'; // Col M
+                                        customHeaderRow[13] = 'TOTAL PERIODO'; // Col N
+                                    }
+
+                                    resData.sheets[name] = {
+                                        fields: fieldsWithIdx,
+                                        headerRow: customHeaderRow,
+                                        rows: finalRows
+                                    };
+                                } else {
+                                    // Fallback to Template (Skeleton) from the Manager
+                                    resData.sheets[name] = {
+                                        fields: fieldsWithIdx,
+                                        headerRow: (struct.masterRows?.[0] || []).slice(0, 14),
+                                        rows: [...(struct.masterRows || [])]
+                                    };
+                                }
+                            } else {
+                                resData.sheets[name] = { fields: [], rows: [] };
+                            }
+                        });
+
+                        setReportData(resData);
+                        setReportMetadata({ project: activeProj.name, projectId: activeProjId, reportType: selectedType, period });
+                    } catch (err) {
+                        console.error("Error al procesar el reporte:", err);
+                        alert("Error crítico al procesar el archivo. Verifique la consola.");
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            };
+
+            const saveReport = (isResetOnly) => {
+                if (isResetOnly === true) {
+                    setReportData(null); setReportMetadata({}); setIsHistoryView(false);
+                    return;
+                }
+                const report = { 
+                    id: Date.now(), 
+                    ...reportMetadata, 
+                    data: reportData.sheets['Análisis por Categorías'], 
+                    productionStructure: reportData.sheets['Matriz de Producción'] || { rows: [], fields: [], headerRow: [] },
+                    costStructure: reportData.sheets['Matriz de Costo'] || { rows: [], fields: [], headerRow: [] },
+                    resultStructure: reportData.sheets['Matriz de Resultado'] || { rows: [], fields: [], headerRow: [] },
+                    projectionStructure: reportData.sheets['Matriz de Proyección'] || { rows: [], fields: [], headerRow: [] },
+                    metadata: reportMetadata 
+                };
+                setSavedReports([...savedReports, report]); alert("Informe técnico consolidado y guardado.");
+            };
+
+            return (
+                <div className="flex h-screen overflow-hidden">
+                    <ServerStatus online={serverOnline} />
+                    <Sidebar activeTab={activeTab} onTabClick={changeTabAndReset} />
+                    <main className="main-content w-full overflow-hidden bg-slate-50/50">
+                        {activeTab==='dashboard'&&(
+                            <div className="animate-fade-in p-10 h-full overflow-auto">
+                                <h1 className="text-5xl font-black uppercase mb-14 tracking-tighter leading-none">Status de <br/><span className="text-blue-600">Gestión Dossier</span></h1>
+                                <div className="grid grid-cols-3 gap-8">
+                                    <div className="bg-white p-12 rounded-[3.5rem] shadow-sm border border-slate-100 flex flex-col items-center"><h3 className="text-6xl font-black text-slate-900">{processedProjects.length}</h3><p className="text-[12px] font-black text-slate-400 uppercase tracking-widest mt-4">Proyectos Activos</p></div>
+                                    <div className="bg-white p-12 rounded-[3.5rem] shadow-sm border border-slate-100 flex flex-col items-center"><h3 className="text-6xl font-black text-blue-600">{savedReports.length}</h3><p className="text-[12px] font-black text-slate-400 uppercase tracking-widest mt-4">Informes Consolidados</p></div>
+                                </div>
+                            </div>
+                        )}
+                        {activeTab==='obras'&&( <ProjectManager projects={processedProjects} onAdd={p=>setProjects([...projects,p])} onDelete={id=>setProjects(projects.filter(p=>p.id!=id))} reportTypes={reportTypes} /> )}
+                        {activeTab==='analisis'&&(
+                            <div className="animate-fade-in h-[94vh] flex flex-col bg-white rounded-[3.5rem] shadow-2xl border border-slate-100 p-8 m-4">
+                                {reportData ? (
+                                    <div className="flex flex-col h-full overflow-hidden">
+                                            <div className="flex-1 overflow-hidden">
+                                                {activeSubTab === 'categorias' ? (
+                                                    <AnalysisTable 
+                                                        data={reportData.sheets['Análisis por Categorías']} 
+                                                        metadata={reportMetadata} 
+                                                        onSave={saveReport} 
+                                                        isHistoryView={isHistoryView} 
+                                                    />
+                                                ) : (
+                                                    <MatrixAnalysisTable 
+                                                        structure={
+                                                            activeSubTab === 'produccion' ? reportData.sheets['Matriz de Producción'] :
+                                                            activeSubTab === 'costo' ? reportData.sheets['Matriz de Costo'] :
+                                                            activeSubTab === 'resultado' ? reportData.sheets['Matriz de Resultado'] :
+                                                            activeSubTab === 'proyeccion' ? reportData.sheets['Matriz de Proyección'] : { rows: [], fields: [] }
+                                                        } 
+                                                        metadata={reportMetadata} 
+                                                        onSave={saveReport} 
+                                                        isHistoryView={isHistoryView} 
+                                                        viewMode={activeSubTab} 
+                                                    />
+                                                )}
+                                            </div>
+                                        {/* Bottom Tabs (Excel Style) */}
+                                        <div className="flex bg-[#f1f5f9] border-t border-slate-300 mt-auto ml-[-2rem] mr-[-2rem] pl-10 pr-10 items-center justify-start h-[55px] shrink-0">
+                                            {[
+                                                { id: 'categorias', l: '📊 Análisis Categoría', color: 'blue-600' },
+                                                { id: 'produccion', l: '📈 Producción', color: 'blue-600' },
+                                                { id: 'costo', l: '💰 Costo', color: 'orange-500' },
+                                                { id: 'resultado', l: '⚖️ Resultado', color: 'emerald-600' },
+                                                { id: 'proyeccion', l: '🎯 Proyección', color: 'red-600' }
+                                            ].map(tab => (
+                                                <div 
+                                                    key={tab.id}
+                                                    onClick={()=>setActiveSubTab(tab.id)} 
+                                                    className={`excel-tab h-full flex items-center cursor-pointer px-8 font-black uppercase text-[10px] transition-all
+                                                        ${activeSubTab === tab.id ? `bg-white border-t-4 border-${tab.color} text-${tab.color} shadow-[0_-5px_15px_rgba(0,0,0,0.05)]` : 'text-slate-400 hover:bg-slate-200'}`}
+                                                >{tab.l}</div>
+                                            ))}
+                                            <div className="ml-auto text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic pr-4 underline decoration-blue-500">Cost Pro v3.2.4 | Dossier de Control de Costos Activo</div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-full border-4 border-dashed border-slate-100 rounded-[3rem] bg-slate-50/20 gap-10 p-20">
+                                        <div className="text-center space-y-4">
+                                            <p className="text-[12px] font-black uppercase text-blue-400 tracking-[0.4em]">Módulo de Procesamiento Técnico</p>
+                                            <h2 className="text-5xl font-black uppercase tracking-tighter text-slate-950">Subir <span className="text-blue-600">Nuevo Análisis</span></h2>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-8 w-full max-w-5xl bg-white p-10 rounded-[3rem] shadow-xl border border-slate-100">
+                                            <div className="space-y-2"><p className="text-[11px] font-black uppercase text-slate-400 pl-2">Seleccionar Obra</p><select value={activeProjId||''} onChange={e=>setActiveProjId(e.target.value)} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-black uppercase text-[11px] focus:border-blue-600 outline-none"><option value="" disabled>Seleccionar Proyecto...</option>{processedProjects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
+                                            <div className="space-y-2"><p className="text-[11px] font-black uppercase text-slate-400 pl-2">Tipo de Reporte</p><select value={selectedType} onChange={e=>setSelectedType(e.target.value)} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-black uppercase text-[11px] focus:border-blue-600 outline-none">{reportTypes.map((t, idx)=><option key={idx} value={t}>{t}</option>)}</select></div>
+                                            <div className="space-y-2"><p className="text-[11px] font-black uppercase text-slate-400 pl-2">Periodo de Análisis</p><input type="month" value={period} onChange={e=>setPeriod(e.target.value)} className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-black text-[11px] focus:border-blue-600 outline-none" /></div>
+                                        </div>
+                                        <input type="file" ref={inputRef} onChange={handleFile} className="hidden" />
+                                        <button disabled={!activeProjId} onClick={()=>inputRef.current.click()} className="bg-blue-600 text-white px-32 py-7 rounded-[2.5rem] font-black uppercase text-[14px] shadow-[0_20px_50px_rgba(37,99,235,0.3)] hover:scale-105 active:scale-95 transition-all disabled:bg-slate-300 tracking-widest mb-4">🚀 Analizar Plantilla Cost Control</button>
+
+                                        {/* Elegant Templates Table */}
+                                        <div className="w-full max-w-5xl space-y-4 animate-fade-in mt-10">
+                                            <div className="flex items-center gap-4 px-6">
+                                                <div className="h-px bg-slate-100 flex-1"></div>
+                                                <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">Plantillas de Carga Oficiales</h3>
+                                                <div className="h-px bg-slate-100 flex-1"></div>
+                                            </div>
+                                            <div className="bg-white rounded-[3rem] border border-slate-100 shadow-xl overflow-hidden">
+                                                <table className="w-full text-left border-collapse">
+                                                    <thead>
+                                                        <tr className="bg-slate-950 text-white">
+                                                            <th className="px-10 py-6 text-[10px] uppercase tracking-widest font-black">Formato de Informe</th>
+                                                            <th className="px-10 py-6 text-[10px] uppercase tracking-widest font-black">Descripción Técnica</th>
+                                                            <th className="px-10 py-6 text-[10px] uppercase tracking-widest font-black text-center">Descarga</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-50">
+                                                        <tr className="hover:bg-blue-50/20 transition-all group">
+                                                            <td className="px-10 py-8">
+                                                                <div className="flex items-center gap-4">
+                                                                    <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-xl shadow-sm group-hover:scale-110 transition-transform">📊</div>
+                                                                    <span className="font-black text-slate-900 text-sm uppercase tracking-tight">Formato Analisis x Categoria</span>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-10 py-8">
+                                                                <p className="text-[11px] text-slate-500 font-medium leading-relaxed max-w-md">Estructura matriz para el control mensualizado de ingresos, producción y costos reales agrupados por categorías operativas.</p>
+                                                            </td>
+                                                            <td className="px-10 py-8 text-center">
+                                                                <a 
+                                                                    href="template/Formato%20Analisis%20x%20Categoria.xlsx" 
+                                                                    download="Formato_Analisis_x_Categoria.xlsx"
+                                                                    className="inline-block bg-blue-600 text-white px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-600/20 hover:bg-slate-900 transition-all active:scale-95"
+                                                                >
+                                                                    📥 Descargar
+                                                                </a>
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            <p className="text-center text-[9px] font-bold text-slate-300 uppercase tracking-widest mt-6 italic">Asegúrese de respetar la estructura de las columnas para un correcto procesamiento.</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        {activeTab==='estructuras'&&( <StructureManager structures={matrixStructures} onUpdate={setMatrixStructures} onAutoLoad={() => fetchOfficialStructure(false)} /> )}
+                        {activeTab==='historial'&&(
+                            <div className="p-10 space-y-10 animate-fade-in h-full overflow-auto pr-10 pb-32">
+                                <div className="flex justify-between items-end mb-10">
+                                    <div className="space-y-2">
+                                        <h2 className="text-5xl font-black uppercase tracking-tighter leading-none">Historial de <span className="text-blue-600">Cierres</span></h2>
+                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest pl-1">Gestiona, respalda y recupera tus cierres mensuales procesados.</p>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <button onClick={exportJSON} className="bg-white border-2 border-slate-100 text-slate-700 font-black px-8 py-4 rounded-2xl text-[10px] uppercase shadow-sm hover:bg-slate-50 transition-all">📥 Respaldar Historial (JSON)</button>
+                                        <button onClick={importJSON} className="bg-blue-600 text-white font-black px-8 py-4 rounded-2xl text-[10px] uppercase shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all">📤 Restaurar de JSON</button>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 bg-white p-6 rounded-[2.5rem] border border-slate-100 mb-10">
+                                    <div className="space-y-1">
+                                        <p className="text-[9px] font-black uppercase text-slate-400 pl-2">Filtrar por Obra</p>
+                                        <select value={filterProj} onChange={e=>setFilterProj(e.target.value)} className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl font-black uppercase text-[10px] outline-none">
+                                            <option value="all">Todas las Obras</option>
+                                            {processedProjects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-[9px] font-black uppercase text-slate-400 pl-2">Tipo de Informe</p>
+                                        <select value={filterType} onChange={e=>setFilterType(e.target.value)} className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl font-black uppercase text-[10px] outline-none">
+                                            <option value="all">Todos los Tipos</option>
+                                            {reportTypes.map(t=><option key={t} value={t}>{t}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-6">
+                                    {savedReports
+                                        .filter(r => (filterProj === 'all' || r.projectId == filterProj) && (filterType === 'all' || r.reportType === filterType))
+                                        .sort((a,b)=>b.id-a.id)
+                                        .map(r=>(
+                                            <div key={r.id} className="bg-white p-10 rounded-[3.5rem] border border-slate-100 flex justify-between items-center shadow-sm hover:border-blue-200 transition-all group">
+                                                <div className="flex gap-10 items-center">
+                                                    <div className="bg-slate-900 w-24 h-24 rounded-[2.5rem] flex flex-col items-center justify-center font-black group-hover:bg-blue-600 text-white transition-all shadow-lg">
+                                                        <span className="text-[14px]">{r.period?.split('-')[1]}</span>
+                                                        <span className="text-[9px] opacity-70 uppercase tracking-widest">{r.period?.split('-')[0]}</span>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[11px] font-black text-blue-600 uppercase mb-2 tracking-[0.2em]">{r.reportType || 'SIN TIPO'}</p>
+                                                        <h4 className="text-3xl font-black uppercase tracking-tight text-slate-950">{r.project}</h4>
+                                                        <p className="text-[9px] font-bold text-slate-400 mt-2">GUARDADO: {new Date(r.id).toLocaleString()}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex gap-6">
+                                                    <button onClick={()=>setSavedReports(savedReports.filter(rep=>rep.id!==r.id))} className="text-slate-200 hover:text-red-500 p-4 opacity-0 group-hover:opacity-100 transition-all">🗑️</button>
+                                                    <button onClick={()=>{ 
+                                                        setReportData({
+                                                            sheets: {
+                                                                'Análisis por Categorías': r.data,
+                                                                'Matriz de Producción': r.productionStructure || { rows: [], fields: [] },
+                                                                'Matriz de Costo': r.costStructure || { rows: [], fields: [] },
+                                                                'Matriz de Resultado': r.resultStructure || { rows: [], fields: [] },
+                                                                'Matriz de Proyección': r.projectionStructure || { rows: [], fields: [] }
+                                                            }
+                                                        }); 
+                                                        setReportMetadata(r.metadata||r); 
+                                                        setIsHistoryView(true); 
+                                                        setActiveTab('analisis'); 
+                                                        setActiveSubTab('categorias'); 
+                                                    }} className="bg-slate-950 text-white px-12 py-5 rounded-2xl font-black uppercase text-[12px] tracking-widest hover:bg-blue-600 transition-all shadow-xl active:scale-95">Ver Análisis Consolidado</button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    {savedReports.length === 0 && <div className="p-32 text-center rounded-[3rem] border-2 border-dashed border-slate-200 text-slate-300 font-black uppercase text-xs tracking-widest leading-none">Aún no hay informes guardados.</div>}
+                                </div>
+                            </div>
+                        )}
+                        {activeTab==='config'&&(
+                            <ReportTypeManager reportTypes={reportTypes} onUpdate={setReportTypes} />
+                        )}
+                    </main>
+                </div>
+            );
+        };
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>

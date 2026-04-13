@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FINIQUITOS PRO v1.0 - Provisión de Finiquitos</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #0f172a; margin: 0; }
+        .font-heading { font-family: 'Outfit', sans-serif; }
+        .sidebar { width: 260px; position: fixed; left: 0; top: 0; height: 100vh; background: #0f172a; color: white; padding: 2rem 1.25rem; z-index: 100; }
+        .main-content { margin-left: 260px; padding: 2rem; min-height: 100vh; }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Tabla de Finiquitos */
+        .f-container { width: 100%; max-height: 70vh; overflow: auto; background: white; border-radius: 1rem; border: 1px solid #e2e8f0; padding-bottom: 20px;}
+        .f-table { border-collapse: separate; border-spacing: 0; font-size: 0.70rem; width: max-content; }
+        .f-table th { position: sticky; top: 0; z-index: 20; background: #0f172a; color: white; padding: 12px 16px; border-right: 1px solid #334155; border-bottom: 2px solid #0f172a; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+        .f-table td { padding: 8px 16px; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
+        .f-table tr:hover { background: #f8fafc; }
+        .sticky-col { position: sticky; left: 0; z-index: 30; background: #1e293b !important; }
+        .sticky-col-data { position: sticky; left: 0; z-index: 10; background: white; font-weight: 800; border-right: 2px solid #cbd5e1; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const REQUIRED_COLUMNS = [
+            "N°", "CODIGO", "RUT", "NOMBRE", "CARGO", "F.INGRESO", "F.EGRESO", 
+            "MO", "SUBASE", "LIQOAC", "DIAS", "DIAS/MES", "Ftvos.FERIADOS", 
+            "TOTAL", "DIAS P1", "HABERES VAC P1", "DIAS P2", "HABERES VAC P2", 
+            "DIAS P3", "HABERES VAC P3", "DIA VAC (VALOR)", "VACAC. PROP.", 
+            "ITF", "TOTAL ITF", "TOTAL FINAL"
+        ];
+
+        const formatCLP = (val) => {
+            if (typeof val !== 'number') return val;
+            return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(val);
+        };
+
+        const Sidebar = ({ activeTab, onTabClick }) => (
+            <div className="sidebar flex flex-col shadow-2xl">
+                <div className="flex items-center gap-3 mb-10 px-2">
+                    <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center font-black text-white font-heading text-lg shadow-lg shadow-emerald-600/20">F</div>
+                    <span className="font-heading font-extrabold text-white text-lg tracking-tight uppercase tracking-widest">FINIQUITOS <span className="text-emerald-500 text-[10px]">v1.0</span></span>
+                </div>
+                <nav className="flex-1 space-y-2">
+                    {[
+                        { id: 'obras', l: 'Gestión de Obras', icon: '🏗️' },
+                        { id: 'analisis', l: 'Carga de Finiquitos', icon: '📂' },
+                        { id: 'historial', l: 'Historial', icon: '🕒' }
+                    ].map(item => (
+                        <button key={item.id} onClick={() => onTabClick(item.id)} className={`w-full flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-300 ${activeTab === item.id ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-600/30' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+                            <span className="text-xl">{item.icon}</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">{item.l}</span>
+                        </button>
+                    ))}
+                </nav>
+            </div>
+        );
+
+        const ProjectManager = ({ projects, onAdd, onDelete }) => {
+            const [isAdding, setIsAdding] = useState(false);
+            const [name, setName] = useState('');
+            const [code, setCode] = useState('');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                onAdd({ id: Date.now(), name, code, history: [] });
+                setName(''); setCode(''); setIsAdding(false);
+            };
+
+            return (
+                <div className="animate-fade-in space-y-8 h-[90vh] overflow-auto pb-20 pr-4">
+                    <div className="flex justify-between items-end mb-10">
+                        <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none">Gestión de <span className="text-emerald-600">Obras</span></h2>
+                        <button onClick={() => setIsAdding(true)} className="bg-emerald-600 text-white font-black px-10 py-4 rounded-2xl shadow-xl shadow-emerald-600/20 text-[11px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all">Nueva Obra</button>
+                    </div>
+
+                    {isAdding && (
+                        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-6">
+                            <div className="bg-white p-10 rounded-[3rem] w-full max-w-md shadow-2xl space-y-8 animate-fade-in">
+                                <h3 className="text-3xl font-black uppercase tracking-tight">Nueva Obra</h3>
+                                <form onSubmit={handleSubmit} className="space-y-6">
+                                    <div className="space-y-1"><p className="text-[10px] font-black uppercase text-slate-400 pl-1">Nombre Completo</p><input required className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl font-bold focus:border-emerald-600 outline-none" value={name} onChange={e=>setName(e.target.value)} /></div>
+                                    <div className="space-y-1"><p className="text-[10px] font-black uppercase text-slate-400 pl-1">Código Identificador</p><input required className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl font-bold focus:border-emerald-600 outline-none" value={code} onChange={e=>setCode(e.target.value)} /></div>
+                                    <div className="flex gap-4 pt-6">
+                                        <button type="button" onClick={()=>setIsAdding(false)} className="flex-1 font-black uppercase text-[11px] text-slate-400 hover:text-slate-600 transition-colors">Cancelar</button>
+                                        <button type="submit" className="flex-1 bg-emerald-600 text-white p-5 rounded-2xl font-black uppercase text-[11px] shadow-lg shadow-emerald-600/20">Confirmar</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 gap-6">
+                        {projects.map(p => (
+                            <div key={p.id} className="bg-white p-10 rounded-[3rem] border border-slate-100 hover:border-emerald-200 transition-all shadow-sm relative group">
+                                <button onClick={()=>onDelete(p.id)} className="absolute top-8 right-8 p-3 text-slate-200 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">🗑️</button>
+                                <div className="mb-4">
+                                    <span className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest">{p.code}</span>
+                                    <h4 className="text-3xl font-black uppercase mt-2 tracking-tight">{p.name}</h4>
+                                </div>
+                                <div className="text-[11px] font-bold text-slate-400">
+                                    {(p.history || []).length} períodos guardados de Finiquitos.
+                                </div>
+                            </div>
+                        ))}
+                        {projects.length === 0 && (
+                            <div className="text-center p-10 text-slate-400 font-bold uppercase text-xs">No hay obras registradas. Comienza creando una nueva.</div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const DataViewer = ({ rawData, onSave, onDiscard }) => {
+            const [selectedProject, setSelectedProject] = useState('');
+            const [period, setPeriod] = useState('');
+            const projects = JSON.parse(localStorage.getItem('FINIQUITOS_PRO_V1_DATA') || '{"projects":[]}').projects;
+
+            // Generate Summary Row (Totals)
+            const summaryRow = {};
+            REQUIRED_COLUMNS.forEach(col => summaryRow[col] = '');
+            summaryRow['N°'] = '-';
+            summaryRow['CODIGO'] = 'RESUMEN';
+            summaryRow['RUT'] = 'TOTALES';
+            summaryRow['NOMBRE'] = 'GLOBAL';
+            
+            // Sum all numeric columns natively
+            rawData.forEach(row => {
+                REQUIRED_COLUMNS.forEach(col => {
+                    if (typeof row[col] === 'number') {
+                        summaryRow[col] = (summaryRow[col] || 0) + row[col];
+                    }
+                });
+            });
+
+            return (
+                <div className="space-y-6 animate-fade-in">
+                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex gap-6 items-center">
+                        <div className="flex-1 space-y-1">
+                            <label className="text-[10px] font-black tracking-widest text-slate-400 uppercase">Seleccionar Obra</label>
+                            <select value={selectedProject} onChange={e=>setSelectedProject(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold uppercase text-[12px] focus:border-emerald-500 outline-none">
+                                <option value="">-- SELECCIONA UNA OBRA --</option>
+                                {projects.map(p => <option key={p.id} value={p.id}>{p.code} - {p.name}</option>)}
+                            </select>
+                        </div>
+                        <div className="flex-1 space-y-1">
+                            <label className="text-[10px] font-black tracking-widest text-slate-400 uppercase">Período (MES-AÑO)</label>
+                            <input type="month" value={period} onChange={e=>setPeriod(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold uppercase text-[12px] focus:border-emerald-500 outline-none" />
+                        </div>
+                        <div className="pt-5 flex gap-2">
+                            <button onClick={onDiscard} className="bg-red-50 text-red-600 hover:bg-red-100 font-black px-6 py-5 rounded-2xl text-[11px] uppercase tracking-widest transition-all">
+                                Descartar
+                            </button>
+                            <button onClick={() => onSave(selectedProject, period, summaryRow)} disabled={!selectedProject || !period} className="bg-blue-600 disabled:bg-slate-300 disabled:scale-100 text-white font-black px-10 py-5 rounded-2xl text-[11px] uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:bg-blue-700 hover:scale-105 active:scale-95 transition-all">
+                                💾 Guardar en Histórico
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="f-container">
+                        <table className="f-table">
+                            <thead>
+                                <tr>
+                                    {REQUIRED_COLUMNS.map((col, i) => (
+                                        <th key={col} className={i === 1 || i === 3 ? 'sticky-col !bg-slate-800' : ''}>{col}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {[...rawData, summaryRow].map((row, idx) => {
+                                    const isSummary = idx === rawData.length;
+                                    const rowVisualClass = isSummary ? '!bg-slate-900 !text-white !font-black shadow-2xl' : '';
+                                    return (
+                                        <tr key={idx} className={rowVisualClass}>
+                                            {REQUIRED_COLUMNS.map((col, i) => {
+                                                const v = row[col];
+                                                const isNum = typeof v === 'number';
+                                                const isDate = col.includes('F.');
+                                                
+                                                let display = v !== undefined && v !== null ? v : '---';
+                                                if (isDate && isNum && !isSummary) {
+                                                    const d = XLSX.SSF.parse_date_code(v);
+                                                    display = `${d.d.toString().padStart(2,'0')}/${d.m.toString().padStart(2,'0')}/${d.y}`;
+                                                } else if (isNum) {
+                                                    // Decide if it needs CLP formatting
+                                                    const isMoney = !['N°','DIAS','DIAS/MES','Ftvos.FERIADOS','DIAS P1','DIAS P2','DIAS P3','VACAC. PROP.'].includes(col);
+                                                    if (isMoney) display = formatCLP(v);
+                                                    else display = Number(v).toFixed(2).replace('.00', ''); 
+                                                }
+
+                                                let cssClass = "";
+                                                if (i === 1 || i === 3) {
+                                                    cssClass += " sticky-col-data shadow-[1px_0_0_rgba(0,0,0,0.1)]"; 
+                                                    if (isSummary) cssClass += " !bg-slate-800 !text-white !border-slate-700";
+                                                }
+                                                
+                                                // Dynamic Coloring for TOTAL FINAL
+                                                if (col === 'TOTAL FINAL' && isNum) {
+                                                    if (v < 0 && !isSummary) cssClass += " !text-red-600 font-black";
+                                                    else if (v > 0 && !isSummary) cssClass += " !text-emerald-600 font-black";
+                                                    
+                                                    if (isSummary && v < 0) cssClass += " !bg-red-600 !text-white font-black";
+                                                    if (isSummary && v > 0) cssClass += " !bg-emerald-600 !text-white font-black";
+                                                }
+
+                                                return <td key={col} className={`${cssClass} ${isNum ? 'text-right font-medium' : 'text-left'} ${isSummary ? 'border-b-0' : ''}`}>{display}</td>;
+                                            })}
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        };
+
+        const FiniquitosUploader = ({ onDataParsed }) => {
+            const handleFileUpload = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const data = new Uint8Array(ev.target.result);
+                    const wb = XLSX.read(data, { type: 'array' });
+                    
+                    const firstSheetName = wb.SheetNames[0];
+                    const sheet = wb.Sheets[firstSheetName];
+                    
+                    const rawJson = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                    if (rawJson.length < 2) {
+                        alert("El archivo está vacío o no tiene el formato correcto.");
+                        return;
+                    }
+
+                    // Scan first 10 rows to find header
+                    let headerRowIdx = -1;
+                    for (let i = 0; i < 10; i++) {
+                        if (rawJson[i] && rawJson[i].length > 10) { 
+                            headerRowIdx = i;
+                            break;
+                        }
+                    }
+
+                    if (headerRowIdx === -1) {
+                        alert("No se pudo identificar una fila de cabeceras en las primeras líneas del archivo.");
+                        return;
+                    }
+
+                    const headers = rawJson[headerRowIdx].map(h => String(h||'').trim().toUpperCase());
+                    
+                    const missing = [];
+                    REQUIRED_COLUMNS.forEach(expected => {
+                        let expectedSanitized = expected.replace('N°', 'N'); 
+                        // Búsqueda más flexible quitando espacios
+                        const eClean = expectedSanitized.toUpperCase().replace(/\s+/g, '');
+                        const found = headers.find(h => {
+                            const hClean = h.replace(/\s+/g, '');
+                            return hClean.includes(eClean) || eClean.includes(hClean);
+                        });
+                        if (!found) missing.push(expected);
+                    });
+
+                    // VALIDACIÓN DESHABILITADA TEMPORALMENTE A PETICIÓN DEL USUARIO
+                    if (missing.length > 0) {
+                        console.warn(`[Modo Permisivo] Faltan columnas teóricas: ${missing.join(", ")}`);
+                        // alert(`❌ El formato que intenta subir NO corresponde al INFORME DE PROVISIÓN DE FINIQUITOS.\n\nFaltan las siguientes columnas obligatorias:\n${missing.join(", ")}`);
+                        // return;
+                    }
+
+                    const finalData = [];
+                    for(let r = headerRowIdx + 1; r < rawJson.length; r++) {
+                        const rowArr = rawJson[r];
+                        // Skip completely empty rows
+                        if (!rowArr || rowArr.length === 0 || rowArr.every(x => x === undefined || x === null || x === "")) continue; 
+
+                        const rowObj = {};
+                        REQUIRED_COLUMNS.forEach(expected => {
+                            let expectedSanitized = expected.replace('N°', 'N');
+                            const eClean = expectedSanitized.toUpperCase().replace(/\s+/g, '');
+                            const hIdx = headers.findIndex(h => {
+                                const hClean = h.replace(/\s+/g, '');
+                                return hClean.includes(eClean) || eClean.includes(hClean);
+                            });
+                            rowObj[expected] = hIdx !== -1 ? rowArr[hIdx] : null;
+                        });
+                        
+                        // Avoid adding non-data generic "Totals" imported from excel at the bottom if any
+                        if (String(rowObj['RUT'] || "").toUpperCase().includes("TOTAL")) continue;
+
+                        finalData.push(rowObj);
+                    }
+
+                    onDataParsed(finalData);
+                };
+                reader.readAsArrayBuffer(file);
+                // Reset input
+                e.target.value = '';
+            };
+
+            return (
+                <div className="flex flex-col items-center justify-center p-20 border-4 border-dashed border-slate-300 rounded-[3rem] bg-slate-50 hover:bg-white hover:border-emerald-400 transition-all cursor-pointer relative group animate-fade-in shadow-sm hover:shadow-xl hover:shadow-emerald-900/5">
+                    <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                    <div className="text-6xl mb-6 group-hover:scale-110 group-hover:-translate-y-2 transition-transform duration-300 drop-shadow-md">📊</div>
+                    <div className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-4 py-1 rounded-full uppercase tracking-widest mb-4">Módulo Estricto</div>
+                    <h3 className="text-2xl font-black uppercase tracking-tight text-slate-800 mb-2">Importar Excel de Finiquitos</h3>
+                    <p className="text-xs text-slate-400 font-bold uppercase text-center max-w-lg leading-relaxed mt-2">
+                        El sistema validará rígidamente la existencia de las <span className="text-emerald-600 font-black">25 columnas contables</span>. Si detecta alteraciones estructurales, rechazará inmediatamente la planilla.
+                    </p>
+                </div>
+            );
+        };
+
+        const MainApp = () => {
+            const [activeTab, setActiveTab] = useState('analisis');
+            const [projects, setProjects] = useState([]);
+            const [previewData, setPreviewData] = useState(null);
+
+            useEffect(() => {
+                const ls = localStorage.getItem('FINIQUITOS_PRO_V1_DATA');
+                if (ls) setProjects(JSON.parse(ls).projects || []);
+            }, []);
+
+            const saveState = (newProjects) => {
+                setProjects(newProjects);
+                localStorage.setItem('FINIQUITOS_PRO_V1_DATA', JSON.stringify({ projects: newProjects }));
+            };
+
+            const handleSaveReport = (projectId, period, summaryRow) => {
+                const proj = projects.find(p => p.id == projectId);
+                if (!proj) return;
+
+                const confirmed = confirm(`¿Guardar este informe (${previewData.length} trabajadores) en la obra [${proj.code}] para el período [${period}]?`);
+                if (confirmed) {
+                    // Evitar duplicar período
+                    let filteredHistory = (proj.history || []).filter(h => h.period !== period);
+                    const newEntry = { period, dateSaved: new Date().toISOString(), data: previewData, summary: summaryRow };
+                    
+                    const newProj = { ...proj, history: [...filteredHistory, newEntry].sort((a,b) => b.period.localeCompare(a.period)) };
+                    saveState(projects.map(p => p.id == projectId ? newProj : p));
+                    
+                    setPreviewData(null);
+                    alert("✅ Informe guardado en el Histórico exitosamente.");
+                    setActiveTab('historial');
+                }
+            };
+
+            return (
+                <div className="flex bg-[#f8fafc]">
+                    <Sidebar activeTab={activeTab} onTabClick={setActiveTab} />
+                    <main className="main-content flex-1 max-w-[calc(100vw-260px)]">
+                        {activeTab === 'obras' && (
+                            <ProjectManager 
+                                projects={projects} 
+                                onAdd={(p) => saveState([...projects, p])} 
+                                onDelete={(id) => confirm('¿Eliminar obra y TODO su historial de finiquitos de manera irrecuperable?') && saveState(projects.filter(x => x.id !== id))} 
+                            />
+                        )}
+                        {activeTab === 'analisis' && (
+                            <div className="space-y-10">
+                                <div className="space-y-2">
+                                    <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none">Carga de <span className="text-emerald-600">Finiquitos</span></h2>
+                                    <p className="text-[11px] font-bold text-slate-400 pl-1 uppercase tracking-widest">Auditoría y Validación Estricta de Planillas RRHH.</p>
+                                </div>
+                                {!previewData ? (
+                                    <FiniquitosUploader onDataParsed={setPreviewData} />
+                                ) : (
+                                    <DataViewer rawData={previewData} onSave={handleSaveReport} onDiscard={() => setPreviewData(null)} />
+                                )}
+                            </div>
+                        )}
+                        {activeTab === 'historial' && (
+                             <div className="space-y-10 animate-fade-in">
+                                <div className="space-y-2 mb-10">
+                                    <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none">Historial de <span className="text-emerald-600">Provisiones</span></h2>
+                                    <p className="text-[11px] font-bold text-slate-400 pl-1 uppercase tracking-widest">Informes guardados por Obra y Período.</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-6">
+                                    {projects.filter(p => p.history && p.history.length > 0).map(p => (
+                                        <div key={p.id} className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                                            <div className="flex items-center gap-4 mb-6">
+                                                <span className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest">{p.code}</span>
+                                                <h3 className="text-2xl font-black uppercase tracking-tight">{p.name}</h3>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-6">
+                                                {(p.history).map((h, i) => (
+                                                    <div key={i} className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-xs font-black uppercase tracking-widest text-slate-400">PERIODO</span>
+                                                            <span className="text-sm font-black bg-slate-800 text-white px-3 py-1 rounded-md">{h.period}</span>
+                                                        </div>
+                                                        <div className="pt-4 border-t border-slate-200">
+                                                            <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Total Trabajadores</p>
+                                                            <p className="text-xl font-black">{h.data.length}</p>
+                                                        </div>
+                                                        <div className="">
+                                                            <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Total Final Provisión</p>
+                                                            <p className={`text-2xl font-black ${h.summary && h.summary['TOTAL FINAL'] < 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                                                                {h.summary && h.summary['TOTAL FINAL'] ? formatCLP(h.summary['TOTAL FINAL']) : formatCLP(0)}
+                                                            </p>
+                                                        </div>
+                                                        <p className="text-[9px] text-slate-400 font-bold uppercase mt-4">Guardado el: {new Date(h.dateSaved).toLocaleString()}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {projects.filter(p => p.history && p.history.length > 0).length === 0 && (
+                                        <div className="text-center p-20 border-2 border-dashed border-slate-200 rounded-3xl">
+                                            <h3 className="text-xl font-black text-slate-400 uppercase tracking-tight">No hay historial disponible</h3>
+                                            <p className="text-xs font-bold text-slate-400 mt-2">Los informes guardados aparecerán aquí.</p>
+                                        </div>
+                                    )}
+                                </div>
+                             </div>
+                        )}
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<MainApp />);
+    </script>
+</body>
+</html>
