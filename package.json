@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "homepage": "https://angelltapiabecerra2025.github.io/app_costo/",
+  "homepage": "https://angeltapiabecerra2025.github.io/app_costo/",
   "scripts": {
     "dev": "vite",
     "server": "node server.js",
