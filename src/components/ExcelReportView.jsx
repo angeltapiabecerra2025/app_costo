@@ -8,7 +8,7 @@ import {
   Layers,
   ArrowRight
 } from 'lucide-react';
-import { cn } from '../App';
+import { cn } from '../utils/cn';
 
 const SheetTabs = ({ sheets, activeSheet, onSheetChange }) => {
   return (

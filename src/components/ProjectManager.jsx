@@ -14,9 +14,9 @@ import {
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 
-const ProjectManager = ({ projects = [], onAddProject, onDeleteProject, onSelectProject, activeProjectId }) => {
+const ProjectManager = ({ projects = [], onAddProject, onDeleteProject, onUpdateProject, onSelectProject, activeProjectId }) => {
   const [isAdding, setIsAdding] = useState(false);
-  const [newProject, setNewProject] = useState({ name: '', code: '', location: '' });
+  const [newProject, setNewProject] = useState({ name: '', code: '', location: '', startDate: '', endDate: '' });
 
   const reportTypes = [
     "Informe de Costos",
@@ -40,12 +40,12 @@ const ProjectManager = ({ projects = [], onAddProject, onDeleteProject, onSelect
       reports: reportTypes.map((name, i) => ({
         id: i + 1,
         name,
-        uploadedPeriods: [], // Array of YYYY-MM
+        uploadedPeriods: [],
       }))
     };
     
     onAddProject(project);
-    setNewProject({ name: '', code: '', location: '' });
+    setNewProject({ name: '', code: '', location: '', startDate: '', endDate: '' });
     setIsAdding(false);
   };
 
@@ -54,17 +54,17 @@ const ProjectManager = ({ projects = [], onAddProject, onDeleteProject, onSelect
       {/* Header Area */}
       <div className="flex justify-between items-end">
         <div className="space-y-2">
-           <div className="flex items-center gap-3 text-blue-600 mb-1">
+           <div className="flex items-center gap-3 text-rose-600 mb-1">
               <Building2 size={24} strokeWidth={2.5} />
               <span className="text-[10px] font-black uppercase tracking-[0.2em]">Gestión de Activos</span>
            </div>
-           <h2 className="text-4xl font-black text-slate-900 font-heading uppercase tracking-tight leading-none">Mantenedor de <span className="text-blue-600">Obras</span></h2>
-           <p className="text-slate-500 font-bold opacity-70">Administra tus proyectos y el flujo de los 8 informes técnicos obligatorios.</p>
+           <h2 className="text-4xl font-black text-slate-900 font-heading uppercase tracking-tight leading-none">Gestión de <span className="text-rose-600">Obras</span></h2>
+           <p className="text-slate-500 font-bold opacity-70">Administra tus proyectos, define sus fechas y abreviaturas oficiales.</p>
         </div>
 
         <button 
           onClick={() => setIsAdding(true)}
-          className="bg-blue-600 text-white font-black px-8 py-4 rounded-2xl text-[10px] uppercase tracking-widest flex items-center gap-3 hover:bg-blue-700 transition-all active:scale-95 shadow-xl shadow-blue-600/20"
+          className="bg-rose-600 text-white font-black px-10 py-4 rounded-2xl text-[10px] uppercase tracking-widest flex items-center gap-3 hover:scale-105 transition-all active:scale-95 shadow-xl shadow-rose-600/20"
         >
           <Plus size={18} /> Nueva Obra
         </button>
@@ -93,24 +93,46 @@ const ProjectManager = ({ projects = [], onAddProject, onDeleteProject, onSelect
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Código Interno</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Abreviatura / Código</label>
                   <input 
                     required
-                    placeholder="Ej: P-2024-05"
+                    placeholder="Ej: PANAL"
                     className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-4 outline-none focus:border-blue-500 focus:bg-white transition-all font-bold text-slate-700"
                     value={newProject.code}
                     onChange={e => setNewProject({...newProject, code: e.target.value})}
                   />
                 </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Ubicación / Ciudad</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Fecha de Inicio</label>
                   <input 
-                    placeholder="Ej: Santiago"
+                    type="month"
+                    required
                     className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-4 outline-none focus:border-blue-500 focus:bg-white transition-all font-bold text-slate-700"
-                    value={newProject.location}
-                    onChange={e => setNewProject({...newProject, location: e.target.value})}
+                    value={newProject.startDate}
+                    onChange={e => setNewProject({...newProject, startDate: e.target.value})}
                   />
                 </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Fecha de Término</label>
+                  <input 
+                    type="month"
+                    required
+                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-4 outline-none focus:border-blue-500 focus:bg-white transition-all font-bold text-slate-700"
+                    value={newProject.endDate}
+                    onChange={e => setNewProject({...newProject, endDate: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Ubicación / Ciudad</label>
+                <input 
+                  placeholder="Ej: Santiago"
+                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-4 outline-none focus:border-blue-500 focus:bg-white transition-all font-bold text-slate-700"
+                  value={newProject.location}
+                  onChange={e => setNewProject({...newProject, location: e.target.value})}
+                />
               </div>
 
               <div className="pt-6 flex gap-3">
@@ -148,106 +170,83 @@ const ProjectManager = ({ projects = [], onAddProject, onDeleteProject, onSelect
             <div 
               key={project.id} 
               className={cn(
-                "group glass bg-white p-8 rounded-[2.5rem] border transition-all duration-500 flex flex-col gap-8",
+                "group glass bg-white px-8 py-5 rounded-[2rem] border transition-all duration-500 flex items-center justify-between gap-8",
                 activeProjectId === project.id 
                   ? "border-blue-500 shadow-2xl shadow-blue-600/5 ring-1 ring-blue-500/10" 
                   : "border-slate-100 hover:border-slate-300 shadow-sm"
               )}
             >
-              <div className="flex justify-between items-start">
-                <div className="flex items-center gap-6">
-                  <div className={cn(
-                    "w-16 h-16 rounded-3xl flex items-center justify-center transition-all duration-300",
-                    activeProjectId === project.id ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-400"
-                  )}>
-                    <Building2 size={24} />
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-3">
-                      <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-md uppercase tracking-wider">{project.code}</span>
-                      {activeProjectId === project.id && (
-                        <span className="animate-pulse flex items-center gap-1.5 text-[9px] font-black text-emerald-600 uppercase">
-                          <CheckCircle2 size={12} /> Activa ahora
-                        </span>
-                      )}
-                    </div>
-                    <h4 className="text-2xl font-black text-slate-900 uppercase tracking-tight leading-none pt-1">{project.name}</h4>
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-tight flex items-center gap-2">
-                       Ubicación: <span className="text-slate-600 underline underline-offset-4 decoration-slate-200">{project.location || 'No definida'}</span>
-                    </p>
-                  </div>
+              <div className="flex items-center gap-6 flex-1 min-w-0">
+                <div className={cn(
+                  "w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 shrink-0",
+                  project.active !== false ? (activeProjectId === project.id ? "bg-rose-600 text-white" : "bg-rose-50 text-rose-600") : "bg-slate-100 text-slate-400"
+                )}>
+                  <Building2 size={20} />
                 </div>
-
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => onDeleteProject(project.id)}
-                    className="p-4 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all"
-                  >
-                    <Trash2 size={20} />
-                  </button>
-                  <button 
-                    onClick={() => onSelectProject(project.id)}
-                    className={cn(
-                      "flex items-center gap-3 px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95",
-                      activeProjectId === project.id 
-                        ? "bg-slate-900 text-white" 
-                        : "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-600/20"
+                <div className="space-y-0.5 flex-1 min-w-0">
+                  <div className="flex items-center gap-3">
+                    <span className={cn(
+                      "text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider",
+                      project.active !== false ? "text-rose-600 bg-rose-50" : "text-slate-400 bg-slate-100"
+                    )}>{project.code}</span>
+                    {project.active === false && <span className="text-[8px] font-black text-rose-500 uppercase bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200">Desactivada</span>}
+                    {activeProjectId === project.id && (
+                      <span className="animate-pulse flex items-center gap-1.5 text-[8px] font-black text-emerald-600 uppercase">
+                        <CheckCircle2 size={10} /> Activa ahora
+                      </span>
                     )}
-                  >
-                    {activeProjectId === project.id ? 'Obra Activa' : 'Seleccionar Obra'} <ArrowRight size={16} />
-                  </button>
+                  </div>
+                  <h4 className="text-xl font-black text-slate-900 uppercase tracking-tight leading-none truncate">{project.name}</h4>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-2">
+                     {project.location || 'Chile'}
+                  </p>
                 </div>
               </div>
 
-              {/* Reports Checklist Mini-Dashboard */}
-              <div className="bg-slate-50/50 rounded-3xl p-6 border border-slate-100 grid grid-cols-4 gap-6">
-                 {project.reports.map((report, idx) => {
-                    const sortedPeriods = [...(report.uploadedPeriods || [])].sort().reverse();
-                    const lastPeriod = sortedPeriods[0];
-                    const isUpToDate = lastPeriod === new Date().toISOString().slice(0, 7);
-                    
-                    return (
-                      <div key={idx} className="flex flex-col gap-2 relative group-item">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                               {lastPeriod ? (
-                                 <CheckCircle2 size={14} className="text-emerald-500" />
-                               ) : (
-                                 <Circle size={14} className="text-slate-300" />
-                               )}
-                               <span className={cn(
-                                 "text-[9px] font-black uppercase tracking-tight truncate max-w-[120px]",
-                                 lastPeriod ? "text-slate-900" : "text-slate-400"
-                               )}>
-                                 {report.name}
-                               </span>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center justify-between mt-1">
-                             <span className={cn(
-                               "text-[8px] font-bold uppercase",
-                               lastPeriod ? "text-emerald-600" : "text-amber-500"
-                             )}>
-                               {lastPeriod ? `Subido: ${lastPeriod}` : 'Falta subir'}
-                             </span>
-                             {lastPeriod && (
-                               <span className="text-[7px] font-black text-slate-300 uppercase italic">
-                                 {sortedPeriods.length} reg.
-                               </span>
-                             )}
-                          </div>
-
-                          <div className="h-1 bg-slate-200 rounded-full overflow-hidden mt-1">
-                             <div className={cn(
-                               "h-full transition-all duration-500",
-                               lastPeriod ? "w-full bg-emerald-500" : "w-1 bg-slate-300"
-                             )}></div>
-                          </div>
-                      </div>
-                    );
-                 })}
+              <div className="flex items-center gap-6 bg-slate-50/50 py-3 px-6 rounded-2xl border border-slate-100 shrink-0">
+                 <p className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-2">
+                    <Calendar size={14} className="text-slate-300" /> 
+                    <span className="text-slate-700 font-black">{project.startDate || '---'} — {project.endDate || '---'}</span>
+                 </p>
               </div>
+
+                  <div className="flex items-center gap-3">
+                    <button 
+                      onClick={() => onUpdateProject?.({...project, active: project.active !== false ? false : true})}
+                      className={cn(
+                        "flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-[10px] uppercase transition-all shadow-sm",
+                        project.active !== false 
+                          ? "bg-emerald-50 text-emerald-600 hover:bg-rose-50 hover:text-rose-600 border border-emerald-100 hover:border-rose-100" 
+                          : "bg-slate-100 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600"
+                      )}
+                    >
+                      {project.active !== false ? 'Desactivar' : 'Activar'}
+                    </button>
+                    
+                    <button 
+                      onClick={() => onDeleteProject(project.id)}
+                      className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                    
+                    <button 
+                      onClick={() => (project.active !== false) && onSelectProject(project.id)}
+                      disabled={project.active === false}
+                      className={cn(
+                        "flex items-center gap-3 px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95",
+                        project.active === false
+                          ? "bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-100"
+                          : activeProjectId === project.id 
+                            ? "bg-slate-900 text-white shadow-slate-900/10" 
+                            : "bg-rose-600 text-white hover:bg-rose-700 shadow-rose-600/20"
+                      )}
+                    >
+                      {activeProjectId === project.id ? 'Cargada' : 'Seleccionar'} <ArrowRight size={14} />
+                    </button>
+                  </div>
+              </div>
+
             </div>
           ))
         )}

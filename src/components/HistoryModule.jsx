@@ -8,7 +8,8 @@ import {
   Calendar, 
   Building2, 
   Database,
-  ArrowRight
+  ArrowRight,
+  FileText
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 

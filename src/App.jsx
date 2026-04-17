@@ -18,10 +18,14 @@ import {
   ClipboardList,
   ChevronDown,
   Users,
-  TrendingUp,
   BarChart,
   Receipt,
-  Camera
+  Camera,
+  Building2,
+  History,
+  Database,
+  AlertCircle,
+  Upload
 } from 'lucide-react';
 
 // Shared Utilities
@@ -36,6 +40,8 @@ import ProductionMatrixTable from './components/ProductionMatrixTable';
 import CostSummaryTable from './components/CostSummaryTable';
 import HistoryModule from './components/HistoryModule';
 import ProjectManager from './components/ProjectManager';
+import FlowObraTable from './components/FlowObraTable';
+import PaymentStatusTable from './components/PaymentStatusTable';
 import { parseCostReport } from './services/ExcelBridge';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
@@ -45,8 +51,8 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
     { id: 'historial', label: 'Historial / Backups', icon: History, group: 'admin' },
     { id: 'analisis', label: '1. Análisis de Costos', icon: Database, group: 'gestion' },
     { id: 'finiquitos', label: '2. Provisión Finiquitos', icon: Users, group: 'gestion' },
-    { id: 'mensual', label: '3. Informe Mensual', icon: FileText, group: 'gestion' },
-    { id: 'flujo', label: '4. Flujo de Obra', icon: TrendingUp, group: 'gestion' },
+    { id: 'flujo', label: '3. Flujo de Obra', icon: TrendingUp, group: 'gestion' },
+    { id: 'mensual', label: '4. Informe Mensual', icon: FileText, group: 'gestion' },
     { id: 'proyeccion_ing', label: '5. Proy. Ingreso', icon: BarChart, group: 'gestion' },
     { id: 'pagos', label: '6. Estados de Pagos', icon: CheckCircle2, group: 'gestion' },
     { id: 'facturacion', label: '7. Facturación', icon: Receipt, group: 'gestion' },
@@ -54,36 +60,42 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
   ];
 
   return (
-    <div className="w-[260px] h-screen bg-[#0f172a] border-r border-[#1e293b] flex flex-col p-4 fixed left-0 top-0 z-50">
-      <div className="flex items-center gap-3 px-2 mb-10">
-        <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/20">
-          C
+    <div className="w-[260px] h-screen bg-white border-r border-slate-200 flex flex-col p-5 fixed left-0 top-0 z-50 shadow-2xl">
+      <div className="flex items-center gap-3 px-2 mb-12">
+        <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
+          <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-md">
+            <path d="M50 5 L90 27.5 L90 72.5 L50 95 L10 72.5 L10 27.5 Z" fill="#e11d48" />
+          </svg>
+          <span className="absolute inset-0 flex items-center justify-center text-white font-black text-2xl tracking-tighter">$</span>
         </div>
-        <h1 className="text-xl font-black font-heading text-white tracking-tight uppercase tracking-tighter">COST PRO <span className="text-blue-500">v3.2</span></h1>
+        <div className="flex flex-col">
+          <h1 className="text-xl font-black font-heading text-[#e11d48] tracking-widest uppercase leading-none">EIMI-COST</h1>
+          <span className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-400 mt-1">Gestión Técnica</span>
+        </div>
       </div>
 
-      <nav className="flex-1 space-y-6 overflow-y-auto custom-scrollbar pr-2">
-        <div className="space-y-1">
-          <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-4 mb-2">Administración</p>
+      <nav className="flex-1 space-y-8 overflow-y-auto custom-scrollbar pr-2">
+        <div className="space-y-1.5">
+          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-4 mb-3 opacity-70">Administración</p>
           {menuItems.filter(i => i.group === 'admin').map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
               className={cn(
-                "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 group",
+                "w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 group",
                 activeTab === item.id 
-                  ? "bg-blue-600 text-white shadow-xl shadow-blue-600/20" 
-                  : "text-slate-400 hover:text-white hover:bg-slate-800"
+                  ? "bg-[#e11d48] text-white shadow-xl shadow-rose-600/30" 
+                  : "text-slate-500 hover:text-[#e11d48] hover:bg-slate-50"
               )}
             >
-              <item.icon size={18} className={cn(activeTab === item.id ? "text-white" : "text-slate-500 group-hover:text-blue-400")} />
-              <span className="font-extrabold text-[11px] uppercase tracking-widest">{item.label}</span>
+              <item.icon size={18} className={cn(activeTab === item.id ? "text-white" : "text-slate-400 group-hover:text-[#e11d48]")} strokeWidth={activeTab === item.id ? 2.5 : 2} />
+              <span className="font-black text-[11px] uppercase tracking-widest">{item.label}</span>
             </button>
           ))}
         </div>
 
-        <div className="space-y-1">
-          <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-4 mb-2">Módulos de Gestión</p>
+        <div className="space-y-1.5">
+          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-4 mb-3 opacity-70">Módulos de Gestión</p>
           {menuItems.filter(i => i.group === 'gestion').map((item) => (
             <button
               key={item.id}
@@ -94,27 +106,24 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
                 setActiveTab(item.id);
               }}
               className={cn(
-                "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 group",
+                "w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 group",
                 activeTab === item.id 
-                  ? "bg-blue-600 text-white shadow-xl shadow-blue-600/20" 
-                  : "text-slate-400 hover:text-white hover:bg-slate-800"
+                  ? "bg-[#e11d48] text-white shadow-xl shadow-rose-600/30" 
+                  : "text-slate-500 hover:text-[#e11d48] hover:bg-slate-50"
               )}
             >
-              <item.icon size={18} className={cn(activeTab === item.id ? "text-white" : "text-slate-500 group-hover:text-blue-400")} />
-              <span className="font-extrabold text-[11px] uppercase tracking-widest">{item.label}</span>
+              <item.icon size={18} className={cn(activeTab === item.id ? "text-white" : "text-slate-400 group-hover:text-[#e11d48]")} strokeWidth={activeTab === item.id ? 2.5 : 2} />
+              <span className="font-black text-[11px] uppercase tracking-widest">{item.label}</span>
             </button>
           ))}
         </div>
       </nav>
 
-      <div className="mt-auto border-t border-[#1e293b] pt-4 pb-2">
-        <button 
-          onClick={() => setActiveTab('settings')}
-          className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800 transition-all rounded-xl uppercase text-[10px] font-black tracking-widest"
-        >
-          <Settings size={16} />
-          <span>Configuración Sistema</span>
-        </button>
+      <div className="mt-auto border-t border-slate-100 pt-6 px-4">
+        <div className="flex items-center justify-between text-[8px] font-black text-slate-300 uppercase tracking-widest">
+            <span>Versión App</span>
+            <span>v3.3.4</span>
+        </div>
       </div>
     </div>
   );
@@ -122,7 +131,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
 
 const Dashboard = () => {
     const stats = [
-      { label: "Proyectos en Curso", value: "08", sub: "Actualizado hoy", icon: LayoutDashboard , color: "text-blue-500" },
+      { label: "Proyectos en Curso", value: "08", sub: "Actualizado hoy", icon: LayoutDashboard , color: "text-[#e11d48]" },
       { label: "Cierres Procesados", value: "24", sub: "Marzo 2026", icon: History, color: "text-emerald-500" },
       { label: "Alertas Activas", value: "03", sub: "Requieren revisión", icon: AlertCircle, color: "text-amber-500" },
     ];
@@ -131,13 +140,13 @@ const Dashboard = () => {
       <div className="animate-fade-in pb-20">
         <div className="flex justify-between items-end mb-10">
            <div className="space-y-1">
-             <div className="bg-red-600 text-white px-4 py-1 rounded-full text-[10px] font-black w-fit mb-4 animate-pulse">DEBUG: V3.2 RELOADED</div>
-             <h2 className="text-4xl font-black font-heading text-slate-900 tracking-tight uppercase leading-none">Dashboard <span className="text-blue-600">Corporativo</span></h2>
-             <p className="text-slate-500 font-bold opacity-70 italic">Bienvenido, Jefe de OT. Tienes 3 informes pendientes de revisión técnica.</p>
+             <div className="bg-[#e11d48] text-white px-4 py-1 rounded-full text-[10px] font-black w-fit mb-4 animate-pulse uppercase tracking-widest">Estado Sistema: Live</div>
+             <h2 className="text-5xl font-black font-heading text-slate-900 tracking-tighter uppercase leading-none">Dashboard <br/><span className="text-[#e11d48]">EIMI-COST</span></h2>
+             <p className="text-slate-500 font-bold opacity-70 italic mt-6">Gestión técnica y financiera corporativa.</p>
            </div>
            <div className="text-right">
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Fecha de Sesión</p>
-              <p className="text-sm font-black text-slate-600">30 MARZO, 2026</p>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Cierre Actual</p>
+              <p className="text-sm font-black text-slate-600 text-[#e11d48]">ABRIL, 2026</p>
            </div>
         </div>
         
@@ -205,6 +214,8 @@ const App = () => {
   });
   const [isUploading, setIsUploading] = useState(false);
   const [isHistoryView, setIsHistoryView] = useState(false);
+  const [historyFlowData, setHistoryFlowData] = useState(null);
+  const [historyPaymentData, setHistoryPaymentData] = useState(null);
   const fileInputRef = useRef(null);
 
   const reportTypes = [
@@ -221,10 +232,11 @@ const App = () => {
 
   // Consolidate Checklist with actual History
   const consolidateChecklists = (reps, projs) => {
+    if (!Array.isArray(projs)) return [];
     return projs.map(p => ({
       ...p,
-      reports: p.reports.map(r => {
-        const foundPeriods = reps
+      reports: (p.reports || []).map(r => {
+        const foundPeriods = (reps || [])
           .filter(h => h.projectId === p.id && h.reportType === r.name)
           .map(h => h.period);
         return { ...r, uploadedPeriods: Array.from(new Set(foundPeriods)) };
@@ -252,11 +264,17 @@ const App = () => {
         reports = resp.data.reports || [];
         projs = resp.data.projects || [];
       } catch (err) {
-        console.warn("Server offline, using localStorage");
-        const storedReports = localStorage.getItem('cost_pro_reports');
-        const storedProjects = localStorage.getItem('cost_pro_projects');
-        if (storedReports) reports = JSON.parse(storedReports);
-        if (storedProjects) projs = JSON.parse(storedProjects);
+        console.warn("Server offline or data error, checking localStorage");
+        try {
+          const storedReports = localStorage.getItem('cost_pro_reports');
+          const storedProjects = localStorage.getItem('cost_pro_projects');
+          if (storedReports) reports = JSON.parse(storedReports) || [];
+          if (storedProjects) projs = JSON.parse(storedProjects) || [];
+        } catch (localErr) {
+          console.error("Critical: LocalStorage corrupted:", localErr);
+          reports = []; 
+          projs = [];
+        }
       }
 
       const syncedProjects = consolidateChecklists(reports, projs);
@@ -370,16 +388,25 @@ const App = () => {
   };
 
   const loadFromHistory = (report) => {
-    setReportData({ 
-      sheets: { 
-        'Análisis por Categorías': report.data, 
-        'Matriz de Producción': report.productionData || [] 
-      }, 
-      metadata: report.metadata 
-    });
-    setReportMetadata(report.metadata);
     setIsHistoryView(true);
-    setActiveTab('analisis');
+    setReportMetadata(report.metadata);
+    
+    if (report.reportType === 'Flujo de Obra') {
+      setHistoryFlowData(report.data);
+      setActiveTab('flujo');
+    } else if (report.reportType === 'Control de Estados de Pagos') {
+      setHistoryPaymentData(report.data);
+      setActiveTab('pagos');
+    } else {
+      setReportData({ 
+        sheets: { 
+          'Análisis por Categorías': report.data, 
+          'Matriz de Producción': report.productionData || [] 
+        }, 
+        metadata: report.metadata 
+      });
+      setActiveTab('analisis');
+    }
   };
 
   const deleteReport = (id) => {
@@ -610,9 +637,67 @@ const App = () => {
 
         {activeTab === 'finiquitos' && <ModuleUnderConstruction title="Provisión de Finiquitos" icon={Users} />}
         {activeTab === 'mensual' && <ModuleUnderConstruction title="Informe Mensual Técnico" icon={FileText} />}
-        {activeTab === 'flujo' && <ModuleUnderConstruction title="Flujo de Obra" icon={TrendingUp} />}
+        {activeTab === 'flujo' && (
+          <div className="animate-fade-in pb-20">
+            <FlowObraTable
+              projects={projects}
+              activeProjectId={activeProjectId}
+              initialData={historyFlowData}
+              isHistoryView={isHistoryView}
+              onSaveReport={({ reportType, period, projectId, data }) => {
+                const proj = projects.find(p => p.id === projectId);
+                const newReport = {
+                  id: `${proj?.name || 'obra'}-${period}-flujo-${Date.now()}`,
+                  period,
+                  reportType,
+                  data,
+                  fileName: `Flujo_Obra_${period}.xlsx`,
+                  saveDate: new Date().toISOString(),
+                  metadata: { project: proj?.name || 'Obra', reportType },
+                  projectId,
+                };
+                setSavedReports(prev => {
+                  const filtered = prev.filter(
+                    r => !(r.period === period && r.projectId === projectId && r.reportType === reportType)
+                  );
+                  return [...filtered, newReport];
+                });
+                alert(`Flujo de Obra del periodo ${period} guardado con éxito.`);
+              }}
+            />
+          </div>
+        )}
         {activeTab === 'proyeccion_ing' && <ModuleUnderConstruction title="Proyección de Ingreso" icon={BarChart} />}
-        {activeTab === 'pagos' && <ModuleUnderConstruction title="Control de Estados de Pagos" icon={CheckCircle2} />}
+        {activeTab === 'pagos' && (
+          <div className="animate-fade-in pb-20">
+            <PaymentStatusTable
+              projects={projects}
+              activeProjectId={activeProjectId}
+              initialData={historyPaymentData}
+              isHistoryView={isHistoryView}
+              onSaveReport={({ reportType, period, projectId, data }) => {
+                const proj = projects.find(p => p.id === projectId);
+                const newReport = {
+                  id: `${proj?.name || 'obra'}-${period}-edp-${Date.now()}`,
+                  period,
+                  reportType,
+                  data,
+                  fileName: `Control_EDP_${period}.xlsx`,
+                  saveDate: new Date().toISOString(),
+                  metadata: { project: proj?.name || 'Obra', reportType },
+                  projectId,
+                };
+                setSavedReports(prev => {
+                  const filtered = prev.filter(
+                    r => !(r.period === period && r.projectId === projectId && r.reportType === reportType)
+                  );
+                  return [...filtered, newReport];
+                });
+                alert(`${reportType} del periodo ${period} guardado con éxito.`);
+              }}
+            />
+          </div>
+        )}
         {activeTab === 'facturacion' && <ModuleUnderConstruction title="Estatus de Facturación" icon={Receipt} />}
         {activeTab === 'fotos' && <ModuleUnderConstruction title="Informe Fotográfico" icon={Camera} />}
 

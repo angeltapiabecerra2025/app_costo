@@ -6,9 +6,9 @@ const ProductionMatrixTable = ({ data = [] }) => {
     if (typeof val !== 'number') return val;
     return new Intl.NumberFormat('es-CL', {
       style: 'currency',
-      currency: '造LP',
+      currency: 'CLP',
       maximumFractionDigits: 0
-    }).format(val).replace('造LP', '$');
+    }).format(val);
   };
 
   if (!data || data.length === 0) return null;
